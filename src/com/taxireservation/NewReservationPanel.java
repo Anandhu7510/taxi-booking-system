@@ -7,16 +7,6 @@ import java.awt.*;
 /**
  * New booking form: customer details, pickup/drop, cab type, driver assignment,
  * live fare estimate.
- *
- * NetBeans GUI Builder equivalent:
- *  - JPanel, layout GroupLayout (default "Free Design")
- *  - Row of JLabel + JTextField pairs for Customer Name / Phone
- *  - JLabel + JTextField for Pickup Location, Drop Location
- *  - JLabel + JFormattedTextField or JSpinner (date model) for Date/Time
- *  - JLabel + JComboBox<String> cboCabType {Mini, Sedan, SUV, Luxury}
- *  - JLabel + JComboBox<Driver> cboDriver, populated from DataStore.getAvailableDrivers()
- *  - JLabel lblFare showing live estimate (update in cboCabType's itemStateChanged)
- *  - JButton "Confirm Booking" -> actionPerformed calls DataStore.addReservation(...)
  */
 public class NewReservationPanel extends JPanel {
 
@@ -56,10 +46,13 @@ public class NewReservationPanel extends JPanel {
         addField(form, c, row++, "Cab Type", cboCabType);
         addField(form, c, row++, "Assign Driver", cboDriver);
 
-        c.gridx = 0; c.gridy = row; c.gridwidth = 1;
+        c.gridx = 0;
+        c.gridy = row;
+        c.gridwidth = 1;
         JLabel fareCaption = new JLabel("Estimated Fare:");
         fareCaption.setFont(new Font("Segoe UI", Font.BOLD, 13));
         form.add(fareCaption, c);
+
         c.gridx = 1;
         lblFareValue.setFont(new Font("Segoe UI", Font.BOLD, 16));
         lblFareValue.setForeground(new Color(0x10B981));
@@ -67,25 +60,48 @@ public class NewReservationPanel extends JPanel {
         row++;
 
         JButton btnConfirm = new JButton("Confirm Booking");
+        btnConfirm.setUI(new javax.swing.plaf.basic.BasicButtonUI());
         btnConfirm.setBackground(new Color(0xF59E0B));
         btnConfirm.setForeground(Color.WHITE);
+        btnConfirm.setFont(new Font("Segoe UI", Font.BOLD, 12));
+        btnConfirm.setOpaque(true);
+        btnConfirm.setContentAreaFilled(true);
+        btnConfirm.setBorderPainted(false);
         btnConfirm.setFocusPainted(false);
+        btnConfirm.setBorder(BorderFactory.createEmptyBorder(10, 16, 10, 16));
         btnConfirm.addActionListener(e -> confirmBooking());
-        c.gridx = 1; c.gridy = row; c.gridwidth = 1;
+
+        c.gridx = 1;
+        c.gridy = row;
+        c.gridwidth = 1;
         form.add(btnConfirm, c);
 
         cboCabType.addActionListener(e -> updateFareEstimate());
         updateFareEstimate();
 
+        applyCustomerIdentity();
         add(form, BorderLayout.CENTER);
     }
 
+    private void applyCustomerIdentity() {
+        if (Session.hasRole("CUSTOMER") && Session.getCurrentUser() != null) {
+            txtName.setText(Session.getCurrentUser().getDisplayName());
+            txtName.setEditable(false);
+            txtName.setBackground(new Color(0xF3F4F6));
+        }
+    }
+
     private void addField(JPanel form, GridBagConstraints c, int row, String label, JComponent field) {
-        c.gridx = 0; c.gridy = row; c.gridwidth = 1; c.weightx = 0;
+        c.gridx = 0;
+        c.gridy = row;
+        c.gridwidth = 1;
+        c.weightx = 0;
         JLabel l = new JLabel(label);
         l.setFont(new Font("Segoe UI", Font.PLAIN, 13));
         form.add(l, c);
-        c.gridx = 1; c.weightx = 1;
+
+        c.gridx = 1;
+        c.weightx = 1;
         field.setPreferredSize(new Dimension(260, 30));
         form.add(field, c);
     }
@@ -102,10 +118,12 @@ public class NewReservationPanel extends JPanel {
         lblFareValue.setText(String.format("\u20B9 %.0f", base));
     }
 
-    /** Call this whenever the panel becomes visible so the driver list is fresh. */
     @Override
     public void setVisible(boolean visible) {
-        if (visible) refreshDriverList();
+        if (visible) {
+            applyCustomerIdentity();
+            refreshDriverList();
+        }
         super.setVisible(visible);
     }
 
@@ -117,18 +135,20 @@ public class NewReservationPanel extends JPanel {
     }
 
     private void confirmBooking() {
-        if (txtName.getText().isBlank() || txtPhone.getText().isBlank()
-                || txtPickup.getText().isBlank() || txtDrop.getText().isBlank()) {
+        if (txtName.getText().trim().length() == 0 || txtPhone.getText().trim().length() == 0
+                || txtPickup.getText().trim().length() == 0 || txtDrop.getText().trim().length() == 0) {
             JOptionPane.showMessageDialog(this, "Please fill in all required fields.",
                     "Missing Information", JOptionPane.WARNING_MESSAGE);
             return;
         }
+
         Driver driver = (Driver) cboDriver.getSelectedItem();
         if (driver == null) {
             JOptionPane.showMessageDialog(this, "No available driver to assign. Try again shortly.",
                     "No Driver Available", JOptionPane.WARNING_MESSAGE);
             return;
         }
+
         double fare = Double.parseDouble(lblFareValue.getText().replace("\u20B9", "").trim());
 
         DataStore.get().addReservation(txtName.getText(), txtPhone.getText(), txtPickup.getText(),
@@ -139,7 +159,10 @@ public class NewReservationPanel extends JPanel {
         JOptionPane.showMessageDialog(this, "Booking confirmed for " + txtName.getText() + "!",
                 "Success", JOptionPane.INFORMATION_MESSAGE);
 
-        txtName.setText(""); txtPhone.setText(""); txtPickup.setText(""); txtDrop.setText("");
+        if (!Session.hasRole("CUSTOMER")) txtName.setText("");
+        txtPhone.setText("");
+        txtPickup.setText("");
+        txtDrop.setText("");
         txtDateTime.setText(currentDateTime());
         refreshDriverList();
         if (homePanel != null) homePanel.refresh();

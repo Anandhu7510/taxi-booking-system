@@ -60,11 +60,18 @@ public class LoginForm extends JFrame {
 
     private JButton actionButton(String text, Color color) {
         JButton button = new JButton(text);
+        button.setUI(new javax.swing.plaf.basic.BasicButtonUI());
         button.setAlignmentX(Component.CENTER_ALIGNMENT);
         button.setMaximumSize(new Dimension(270, 42));
+        button.setPreferredSize(new Dimension(270, 42));
         button.setBackground(color);
         button.setForeground(Color.WHITE);
+        button.setFont(new Font("Segoe UI", Font.BOLD, 13));
+        button.setOpaque(true);
+        button.setContentAreaFilled(true);
+        button.setBorderPainted(false);
         button.setFocusPainted(false);
+        button.setBorder(BorderFactory.createEmptyBorder(10, 16, 10, 16));
         return button;
     }
 

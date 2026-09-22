@@ -38,15 +38,22 @@ public class AdminLoginForm extends JFrame {
         styleField(txtPassword);
 
         JButton login = new JButton("Login as Admin");
+        login.setUI(new javax.swing.plaf.basic.BasicButtonUI());
         login.setAlignmentX(Component.CENTER_ALIGNMENT);
         login.setMaximumSize(new Dimension(260, 38));
         login.setBackground(new Color(0x374151));
         login.setForeground(Color.WHITE);
+        login.setFont(new Font("Segoe UI", Font.BOLD, 12));
+        login.setOpaque(true);
+        login.setContentAreaFilled(true);
+        login.setBorderPainted(false);
         login.setFocusPainted(false);
         login.addActionListener(e -> doLogin());
 
         JButton back = new JButton("Back");
         back.setAlignmentX(Component.CENTER_ALIGNMENT);
+        back.setMaximumSize(new Dimension(260, 34));
+        back.setForeground(new Color(0x1F2937));
         back.addActionListener(e -> open(new LoginForm()));
 
         card.add(title);

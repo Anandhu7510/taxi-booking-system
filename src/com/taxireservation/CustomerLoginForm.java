@@ -42,16 +42,13 @@ public class CustomerLoginForm extends JFrame {
         styleField(txtUsername);
         styleField(txtPassword);
 
-        JButton login = new JButton("Login");
-        styleButton(login, new Color(0x2563EB));
+        JButton login = primaryButton("Login", new Color(0x2563EB));
         login.addActionListener(e -> doLogin());
 
-        JButton register = new JButton("Create Account");
-        styleButton(register, new Color(0x10B981));
+        JButton register = primaryButton("Create Account", new Color(0x10B981));
         register.addActionListener(e -> open(new RegisterForm()));
 
-        JButton back = new JButton("Back");
-        back.setAlignmentX(Component.CENTER_ALIGNMENT);
+        JButton back = secondaryButton("Back");
         back.addActionListener(e -> open(new LoginForm()));
 
         card.add(title);
@@ -110,12 +107,27 @@ public class CustomerLoginForm extends JFrame {
         field.setFont(new Font("Segoe UI", Font.PLAIN, 13));
     }
 
-    private void styleButton(JButton button, Color color) {
+    private JButton primaryButton(String text, Color color) {
+        JButton button = new JButton(text);
+        button.setUI(new javax.swing.plaf.basic.BasicButtonUI());
         button.setAlignmentX(Component.CENTER_ALIGNMENT);
         button.setMaximumSize(new Dimension(260, 38));
         button.setBackground(color);
         button.setForeground(Color.WHITE);
+        button.setFont(new Font("Segoe UI", Font.BOLD, 12));
+        button.setOpaque(true);
+        button.setContentAreaFilled(true);
+        button.setBorderPainted(false);
         button.setFocusPainted(false);
+        return button;
+    }
+
+    private JButton secondaryButton(String text) {
+        JButton button = new JButton(text);
+        button.setAlignmentX(Component.CENTER_ALIGNMENT);
+        button.setMaximumSize(new Dimension(260, 34));
+        button.setForeground(new Color(0x1F2937));
+        return button;
     }
 
     private void open(JFrame frame) {

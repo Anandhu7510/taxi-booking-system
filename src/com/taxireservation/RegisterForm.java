@@ -42,15 +42,22 @@ public class RegisterForm extends JFrame {
         styleField(txtConfirmPassword);
 
         JButton register = new JButton("Register");
+        register.setUI(new javax.swing.plaf.basic.BasicButtonUI());
         register.setAlignmentX(Component.CENTER_ALIGNMENT);
         register.setMaximumSize(new Dimension(270, 40));
         register.setBackground(new Color(0x10B981));
         register.setForeground(Color.WHITE);
+        register.setFont(new Font("Segoe UI", Font.BOLD, 12));
+        register.setOpaque(true);
+        register.setContentAreaFilled(true);
+        register.setBorderPainted(false);
         register.setFocusPainted(false);
         register.addActionListener(e -> registerCustomer());
 
         JButton back = new JButton("Back to Login Options");
         back.setAlignmentX(Component.CENTER_ALIGNMENT);
+        back.setMaximumSize(new Dimension(270, 34));
+        back.setForeground(new Color(0x1F2937));
         back.addActionListener(e -> open(new LoginForm()));
 
         card.add(title);
