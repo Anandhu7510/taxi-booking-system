@@ -5,24 +5,14 @@ import javax.swing.border.EmptyBorder;
 import java.awt.*;
 
 /**
- * Login screen. Default credentials: admin / admin123
- *
- * NetBeans GUI Builder equivalent:
- *  - JFrame Form, set Layout to "Free Design" (GroupLayout, default)
- *  - Drop a JPanel (cardPanel) sized ~360x420, center it, give it a background color
- *  - Add JLabel "Taxi & Driver Reservation System" (bold, 20pt)
- *  - Add JLabel + JTextField for Username
- *  - Add JLabel + JPasswordField for Password
- *  - Add JButton "Login" -> in Events tab, double-click actionPerformed
+ * Authentication landing screen. Users explicitly choose the customer,
+ * registration, or administrator flow instead of sharing one hard-coded login.
  */
 public class LoginForm extends JFrame {
 
-    private JTextField txtUsername;
-    private JPasswordField txtPassword;
-
     public LoginForm() {
-        setTitle("Taxi & Driver Reservation System - Login");
-        setSize(420, 480);
+        setTitle("Taxi & Driver Reservation System");
+        setSize(440, 500);
         setLocationRelativeTo(null);
         setDefaultCloseOperation(EXIT_ON_CLOSE);
         setResizable(false);
@@ -34,89 +24,52 @@ public class LoginForm extends JFrame {
         JPanel card = new JPanel();
         card.setLayout(new BoxLayout(card, BoxLayout.Y_AXIS));
         card.setBackground(Color.WHITE);
-        card.setBorder(new EmptyBorder(30, 30, 30, 30));
-        card.setPreferredSize(new Dimension(340, 380));
+        card.setBorder(new EmptyBorder(32, 34, 32, 34));
+        card.setPreferredSize(new Dimension(350, 390));
 
         JLabel title = new JLabel("\uD83D\uDE95 Taxi Reservation");
-        title.setFont(new Font("Segoe UI", Font.BOLD, 20));
+        title.setFont(new Font("Segoe UI", Font.BOLD, 21));
         title.setAlignmentX(Component.CENTER_ALIGNMENT);
 
-        JLabel subtitle = new JLabel("Driver & Booking Management");
-        subtitle.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+        JLabel subtitle = new JLabel("Choose how you want to continue");
+        subtitle.setFont(new Font("Segoe UI", Font.PLAIN, 13));
         subtitle.setForeground(Color.GRAY);
         subtitle.setAlignmentX(Component.CENTER_ALIGNMENT);
 
-        txtUsername = new JTextField("admin");
-        txtPassword = new JPasswordField("admin123");
-        styleField(txtUsername);
-        styleField(txtPassword);
+        JButton customerLogin = actionButton("Customer Login", new Color(0x2563EB));
+        customerLogin.addActionListener(e -> open(new CustomerLoginForm()));
 
-        JButton btnLogin = new JButton("Login");
-        btnLogin.setAlignmentX(Component.CENTER_ALIGNMENT);
-        btnLogin.setBackground(new Color(0xF59E0B));
-        btnLogin.setForeground(Color.WHITE);
-        btnLogin.setFocusPainted(false);
-        btnLogin.setMaximumSize(new Dimension(260, 38));
-        btnLogin.addActionListener(e -> doLogin());
+        JButton register = actionButton("Create Customer Account", new Color(0x10B981));
+        register.addActionListener(e -> open(new RegisterForm()));
 
-        JLabel hint = new JLabel("hint: admin / admin123");
-        hint.setFont(new Font("Segoe UI", Font.ITALIC, 11));
-        hint.setForeground(Color.LIGHT_GRAY);
-        hint.setAlignmentX(Component.CENTER_ALIGNMENT);
+        JButton adminLogin = actionButton("Admin Login", new Color(0x374151));
+        adminLogin.addActionListener(e -> open(new AdminLoginForm()));
 
         card.add(title);
-        card.add(Box.createRigidArea(new Dimension(0, 4)));
+        card.add(Box.createRigidArea(new Dimension(0, 6)));
         card.add(subtitle);
-        card.add(Box.createRigidArea(new Dimension(0, 24)));
-        card.add(labeled("Username", txtUsername));
-        card.add(Box.createRigidArea(new Dimension(0, 12)));
-        card.add(labeled("Password", txtPassword));
-        card.add(Box.createRigidArea(new Dimension(0, 24)));
-        card.add(btnLogin);
-        card.add(Box.createRigidArea(new Dimension(0, 10)));
-        card.add(hint);
+        card.add(Box.createRigidArea(new Dimension(0, 38)));
+        card.add(customerLogin);
+        card.add(Box.createRigidArea(new Dimension(0, 14)));
+        card.add(register);
+        card.add(Box.createRigidArea(new Dimension(0, 14)));
+        card.add(adminLogin);
 
         background.add(card);
-
-        // Enter key submits
-        getRootPane().setDefaultButton(btnLogin);
     }
 
-    private JPanel labeled(String label, JComponent field) {
-        JPanel p = new JPanel();
-        p.setLayout(new BoxLayout(p, BoxLayout.Y_AXIS));
-        p.setOpaque(false);
-        p.setAlignmentX(Component.CENTER_ALIGNMENT);
-        JLabel l = new JLabel(label);
-        l.setFont(new Font("Segoe UI", Font.PLAIN, 12));
-        l.setAlignmentX(Component.LEFT_ALIGNMENT);
-        field.setAlignmentX(Component.LEFT_ALIGNMENT);
-        p.add(l);
-        p.add(field);
-        return p;
+    private JButton actionButton(String text, Color color) {
+        JButton button = new JButton(text);
+        button.setAlignmentX(Component.CENTER_ALIGNMENT);
+        button.setMaximumSize(new Dimension(270, 42));
+        button.setBackground(color);
+        button.setForeground(Color.WHITE);
+        button.setFocusPainted(false);
+        return button;
     }
 
-    private void styleField(JComponent field) {
-        field.setMaximumSize(new Dimension(260, 32));
-        field.setFont(new Font("Segoe UI", Font.PLAIN, 13));
-    }
-
-    private void doLogin() {
-        String user = txtUsername.getText().trim();
-        String pass = new String(txtPassword.getPassword());
-        if (user.equals("admin") && pass.equals("admin123")) {
-            dispose();
-            SwingUtilities.invokeLater(() -> new MainDashboard().setVisible(true));
-        } else {
-            JOptionPane.showMessageDialog(this, "Invalid username or password.",
-                    "Login Failed", JOptionPane.ERROR_MESSAGE);
-        }
-    }
-
-    public static void main(String[] args) {
-        try {
-            UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
-        } catch (Exception ignored) { }
-        SwingUtilities.invokeLater(() -> new LoginForm().setVisible(true));
+    private void open(JFrame frame) {
+        dispose();
+        frame.setVisible(true);
     }
 }

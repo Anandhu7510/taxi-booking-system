@@ -15,16 +15,29 @@ building on inside the NetBeans GUI Builder.
    then in NetBeans: right-click project → **Clean and Build**).
 4. Right-click `Main.java` → **Run File** (or set Project Properties → Run →
    Main Class to `com.taxireservation.Main`, then hit the green Run button).
-5. Login screen opens. Use **admin / admin123**.
+5. The login-options screen opens. Choose Customer Login, Register, or Admin Login. For the demo admin account use **admin@taxires.com / admin123**.
 
 No external libraries or database setup needed — it runs immediately with
 seeded sample data (drivers + bookings) held in memory.
+
+
+## Authentication flow
+
+The application now uses separate role-aware screens instead of hard-coded login logic:
+
+- **Customer Login** authenticates `CUSTOMER` accounts from `data/users.txt`.
+- **Register** creates new `CUSTOMER` accounts in `data/users.txt`.
+- **Admin Login** only accepts accounts whose role is `ADMIN`.
+- `Session` stores the signed-in account until logout.
+- Customers open the customer booking dashboard; administrator-only driver/reservation controls remain in the admin dashboard.
+
+Demo administrator account is provisioned in `data/users.txt` as `admin@taxires.com / admin123`.
 
 ## 2. What's included
 
 | Screen | File | Features |
 |---|---|---|
-| Login | `LoginForm.java` | Username/password gate, styled card layout |
+| Authentication | `LoginForm.java`, `CustomerLoginForm.java`, `AdminLoginForm.java`, `RegisterForm.java` | Role-aware customer/admin login, customer registration, file-backed accounts, session tracking |
 | Dashboard | `MainDashboard.java` + `DashboardHomePanel.java` | Sidebar nav (CardLayout), stat cards: total bookings, ongoing trips, completed, revenue |
 | New Booking | `NewReservationPanel.java` | Customer name/phone, pickup/drop, date-time, cab type, **live-updating fare estimate**, auto-filtered list of *available* drivers only |
 | Driver Management | `DriverManagementPanel.java` | Add driver (name, phone, license, vehicle no., type), table view, set Available/Offline, remove driver |

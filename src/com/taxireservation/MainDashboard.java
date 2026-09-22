@@ -23,7 +23,13 @@ public class MainDashboard extends JFrame {
     private DashboardHomePanel homePanel;
 
     public MainDashboard() {
-        setTitle("Taxi & Driver Reservation System");
+        if (!Session.hasRole("ADMIN")) {
+            SwingUtilities.invokeLater(() -> new LoginForm().setVisible(true));
+            dispose();
+            return;
+        }
+
+        setTitle("Taxi & Driver Reservation System - Admin");
         setSize(1100, 680);
         setMinimumSize(new Dimension(900, 600));
         setLocationRelativeTo(null);
@@ -68,6 +74,7 @@ public class MainDashboard extends JFrame {
 
         sidebar.add(Box.createVerticalGlue());
         sidebar.add(navButton("\u21A9  Logout", () -> {
+            Session.logout();
             dispose();
             SwingUtilities.invokeLater(() -> new LoginForm().setVisible(true));
         }));
@@ -96,10 +103,4 @@ public class MainDashboard extends JFrame {
         return btn;
     }
 
-    public static void main(String[] args) {
-        try {
-            UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
-        } catch (Exception ignored) { }
-        SwingUtilities.invokeLater(() -> new MainDashboard().setVisible(true));
-    }
 }
