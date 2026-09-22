@@ -63,10 +63,8 @@ public class CustomerDashboard extends JFrame {
         sidebar.add(logo);
         sidebar.add(userLabel);
         sidebar.add(navButton("\uD83C\uDFE0  Dashboard", () -> cardLayout.show(contentPanel, "HOME")));
-        sidebar.add(navButton("\u2795  New Booking", () -> {
-            bookingPanel.setVisible(true);
-            cardLayout.show(contentPanel, "BOOKING");
-        }));
+        sidebar.add(navButton("\u2795  New Booking", () ->
+                cardLayout.show(contentPanel, "BOOKING")));
         sidebar.add(navButton("\uD83D\uDCCB  My Reservations", () -> {
             reservationsPanel.refresh();
             cardLayout.show(contentPanel, "RESERVATIONS");
