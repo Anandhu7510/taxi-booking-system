@@ -2,6 +2,8 @@ package com.taxireservation;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
+import javax.swing.event.DocumentEvent;
+import javax.swing.event.DocumentListener;
 import java.awt.*;
 
 /**
@@ -9,13 +11,12 @@ import java.awt.*;
  */
 public class NewReservationPanel extends JPanel {
 
-    private static final double DRIVER_ONLY_FARE = 150.0;
-
     private final JTextField txtName = new JTextField();
     private final JTextField txtPhone = new JTextField();
     private final JTextField txtPickup = new JTextField();
     private final JTextField txtDrop = new JTextField();
     private final JTextField txtDateTime = new JTextField(currentDateTime());
+    private final JTextField txtEstimatedKm = new JTextField("10");
 
     private final JComboBox<String> cboServiceType = new JComboBox<>(new String[]{
             "Taxi + Driver", "Driver Only (Own Vehicle)"
@@ -60,6 +61,7 @@ public class NewReservationPanel extends JPanel {
         addField(form, c, row++, "Pickup Location", txtPickup);
         addField(form, c, row++, "Drop Location", txtDrop);
         addField(form, c, row++, "Date / Time", txtDateTime);
+        addField(form, c, row++, "Estimated Distance (km)", txtEstimatedKm);
         addField(form, c, row++, "Service Type", cboServiceType);
         addField(form, c, row++, "Vehicle Details", vehicleDetailsPanel);
         addField(form, c, row++, "Assign Driver", cboDriver);
@@ -117,6 +119,17 @@ public class NewReservationPanel extends JPanel {
         });
         cboCabType.addActionListener(e -> updateFareEstimate());
 
+        txtEstimatedKm.getDocument().addDocumentListener(new DocumentListener() {
+            @Override
+            public void insertUpdate(DocumentEvent e) { updateFareEstimate(); }
+
+            @Override
+            public void removeUpdate(DocumentEvent e) { updateFareEstimate(); }
+
+            @Override
+            public void changedUpdate(DocumentEvent e) { updateFareEstimate(); }
+        });
+
         applyCustomerIdentity();
         updateServiceMode();
         add(form, BorderLayout.CENTER);
@@ -146,7 +159,6 @@ public class NewReservationPanel extends JPanel {
         txtOwnVehicleType.setPreferredSize(new Dimension(210, 28));
         txtOwnVehicleNumber.setPreferredSize(new Dimension(210, 28));
 
-        // These fields stay normal editable JTextFields at all times.
         txtOwnVehicleType.setEnabled(true);
         txtOwnVehicleNumber.setEnabled(true);
         txtOwnVehicleType.setEditable(true);
@@ -226,25 +238,59 @@ public class NewReservationPanel extends JPanel {
         }
     }
 
-    private void updateFareEstimate() {
-        double fare;
+    private double readEstimatedKm() {
+        try {
+            double km = Double.parseDouble(txtEstimatedKm.getText().trim());
+            return km > 0 ? km : -1;
+        } catch (NumberFormatException ex) {
+            return -1;
+        }
+    }
 
-        if (isDriverOnlyMode()) {
-            fare = DRIVER_ONLY_FARE;
-            lblFareHint.setText("Driver service only - customer provides the vehicle.");
-        } else {
-            String type = (String) cboCabType.getSelectedItem();
-            fare = switch (type == null ? "" : type) {
-                case "Mini" -> 220;
-                case "Sedan" -> 320;
-                case "SUV" -> 480;
-                case "Luxury" -> 750;
-                default -> 250;
-            };
-            lblFareHint.setText("Includes taxi and driver.");
+    private void updateFareEstimate() {
+        double km = readEstimatedKm();
+
+        if (km <= 0) {
+            lblFareValue.setText("\u20B9 0");
+            lblFareHint.setText("Enter a valid distance greater than 0 km.");
+            return;
         }
 
+        double baseFare;
+        double perKm;
+        String pricingLabel;
+
+        if (isDriverOnlyMode()) {
+            baseFare = 50;
+            perKm = 10;
+            pricingLabel = "Driver only";
+        } else {
+            String type = (String) cboCabType.getSelectedItem();
+
+            if ("Mini".equals(type)) {
+                baseFare = 80;
+                perKm = 14;
+            } else if ("Sedan".equals(type)) {
+                baseFare = 120;
+                perKm = 20;
+            } else if ("SUV".equals(type)) {
+                baseFare = 180;
+                perKm = 30;
+            } else if ("Luxury".equals(type)) {
+                baseFare = 250;
+                perKm = 50;
+            } else {
+                baseFare = 80;
+                perKm = 14;
+            }
+            pricingLabel = type == null ? "Taxi + Driver" : type;
+        }
+
+        double fare = baseFare + (perKm * km);
         lblFareValue.setText(String.format("\u20B9 %.0f", fare));
+        lblFareHint.setText(String.format(
+                "%s: \u20B9%.0f base + \u20B9%.0f/km x %.1f km",
+                pricingLabel, baseFare, perKm, km));
     }
 
     @Override
@@ -275,6 +321,15 @@ public class NewReservationPanel extends JPanel {
                 || txtDrop.getText().trim().length() == 0) {
             JOptionPane.showMessageDialog(this, "Please fill in all required fields.",
                     "Missing Information", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+
+        double estimatedKm = readEstimatedKm();
+        if (estimatedKm <= 0) {
+            JOptionPane.showMessageDialog(this,
+                    "Enter a valid estimated distance greater than 0 km.",
+                    "Invalid Distance", JOptionPane.WARNING_MESSAGE);
+            txtEstimatedKm.requestFocusInWindow();
             return;
         }
 
@@ -312,6 +367,7 @@ public class NewReservationPanel extends JPanel {
                 serviceType,
                 cabType,
                 customerVehicle,
+                estimatedKm,
                 driver.getName(),
                 fare,
                 "Pending"
@@ -320,9 +376,8 @@ public class NewReservationPanel extends JPanel {
         DataStore.get().setDriverStatus(driver.getName(), "On Trip");
 
         JOptionPane.showMessageDialog(this,
-                driverOnly
-                        ? "Driver booked successfully for your own vehicle!"
-                        : "Taxi booking confirmed for " + txtName.getText() + "!",
+                String.format("Booking confirmed for %.1f km. Estimated fare: \u20B9%.0f",
+                        estimatedKm, fare),
                 "Success", JOptionPane.INFORMATION_MESSAGE);
 
         if (!Session.hasRole("CUSTOMER")) txtName.setText("");
@@ -330,6 +385,7 @@ public class NewReservationPanel extends JPanel {
         txtPickup.setText("");
         txtDrop.setText("");
         txtDateTime.setText(currentDateTime());
+        txtEstimatedKm.setText("10");
         txtOwnVehicleType.setText("");
         txtOwnVehicleNumber.setText("");
         cboServiceType.setSelectedIndex(0);
