@@ -21,7 +21,7 @@ public class CustomerDashboard extends JFrame {
     private final JLabel lblTotalSpent = new JLabel("\u20B9 0");
     private final JPanel currentRidePanel = new JPanel(new BorderLayout());
     private final DefaultTableModel recentModel = new DefaultTableModel(
-            new String[]{"Route", "Date / Time", "Cab", "Fare", "Status"}, 0) {
+            new String[]{"Route", "Date / Time", "Service", "Fare", "Status"}, 0) {
         @Override
         public boolean isCellEditable(int row, int column) {
             return false;
@@ -112,7 +112,7 @@ public class CustomerDashboard extends JFrame {
         headingText.add(Box.createRigidArea(new Dimension(0, 5)));
         headingText.add(subtitle);
 
-        JButton bookButton = actionButton("Book a Taxi", new Color(0x2563EB));
+        JButton bookButton = actionButton("Book a Ride", new Color(0x2563EB));
         bookButton.addActionListener(e -> showBooking());
 
         header.add(headingText, BorderLayout.WEST);
@@ -285,7 +285,9 @@ public class CustomerDashboard extends JFrame {
             JLabel route = new JLabel(ride.getPickupLocation() + "  \u2192  " + ride.getDropLocation());
             route.setFont(new Font("Segoe UI", Font.BOLD, 18));
 
-            JLabel meta1 = new JLabel("Driver: " + ride.getDriverName() + "    |    " + ride.getCabType());
+            JLabel meta1 = new JLabel("Driver: " + ride.getDriverName()
+                    + "    |    " + ride.getServiceType()
+                    + "    |    " + ride.getVehicleDisplay());
             meta1.setFont(new Font("Segoe UI", Font.PLAIN, 13));
             meta1.setForeground(new Color(0x4B5563));
 
@@ -326,7 +328,7 @@ public class CustomerDashboard extends JFrame {
             recentModel.addRow(new Object[]{
                     reservation.getPickupLocation() + " \u2192 " + reservation.getDropLocation(),
                     reservation.getDateTime(),
-                    reservation.getCabType(),
+                    reservation.getServiceType(),
                     String.format("\u20B9 %.0f", reservation.getFare()),
                     reservation.getStatus()
             });
