@@ -21,7 +21,7 @@ public class CustomerDashboard extends JFrame {
     private final JLabel lblTotalSpent = new JLabel("\u20B9 0");
     private final JPanel currentRidePanel = new JPanel(new BorderLayout());
     private final DefaultTableModel recentModel = new DefaultTableModel(
-            new String[]{"Route", "Date / Time", "Service", "Fare", "Status"}, 0) {
+            new String[]{"Route", "Date / Time", "Service", "Distance", "Fare", "Status"}, 0) {
         @Override
         public boolean isCellEditable(int row, int column) {
             return false;
@@ -291,7 +291,9 @@ public class CustomerDashboard extends JFrame {
             meta1.setFont(new Font("Segoe UI", Font.PLAIN, 13));
             meta1.setForeground(new Color(0x4B5563));
 
-            JLabel meta2 = new JLabel(ride.getDateTime() + "    |    Fare: " + String.format("\u20B9 %.0f", ride.getFare()));
+            JLabel meta2 = new JLabel(ride.getDateTime()
+                    + "    |    Distance: " + ride.getDistanceDisplay()
+                    + "    |    Fare: " + String.format("\u20B9 %.0f", ride.getFare()));
             meta2.setFont(new Font("Segoe UI", Font.PLAIN, 13));
             meta2.setForeground(new Color(0x4B5563));
 
@@ -329,6 +331,7 @@ public class CustomerDashboard extends JFrame {
                     reservation.getPickupLocation() + " \u2192 " + reservation.getDropLocation(),
                     reservation.getDateTime(),
                     reservation.getServiceType(),
+                    reservation.getDistanceDisplay(),
                     String.format("\u20B9 %.0f", reservation.getFare()),
                     reservation.getStatus()
             });

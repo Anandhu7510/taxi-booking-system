@@ -64,7 +64,7 @@ public class ReservationHistoryPanel extends JPanel {
 
     private JScrollPane buildTable() {
         String[] cols = {"ID", "Customer", "Phone", "Pickup", "Drop", "Date/Time",
-                "Service", "Vehicle / Cab", "Driver", "Fare", "Status"};
+                "Service", "Vehicle / Cab", "Distance", "Driver", "Fare", "Status"};
         model = new DefaultTableModel(cols, 0) {
             @Override public boolean isCellEditable(int row, int col) { return false; }
         };
@@ -109,7 +109,7 @@ public class ReservationHistoryPanel extends JPanel {
             if (matchesQuery && matchesStatus) {
                 model.addRow(new Object[]{r.getId(), r.getCustomerName(), r.getCustomerPhone(),
                         r.getPickupLocation(), r.getDropLocation(), r.getDateTime(), r.getServiceType(),
-                        r.getVehicleDisplay(), r.getDriverName(),
+                        r.getVehicleDisplay(), r.getDistanceDisplay(), r.getDriverName(),
                         String.format("\u20B9%.0f", r.getFare()), r.getStatus()});
             }
         }
@@ -123,7 +123,7 @@ public class ReservationHistoryPanel extends JPanel {
             return;
         }
         int id = (int) model.getValueAt(row, 0);
-        String driverName = (String) model.getValueAt(row, 8);
+        String driverName = (String) model.getValueAt(row, 9);
         for (Reservation r : DataStore.get().getReservations()) {
             if (r.getId() == id) r.setStatus(status);
         }

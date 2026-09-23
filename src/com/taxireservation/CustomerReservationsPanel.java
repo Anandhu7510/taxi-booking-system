@@ -18,7 +18,7 @@ public class CustomerReservationsPanel extends JPanel {
         header.setFont(new Font("Segoe UI", Font.BOLD, 22));
         add(header, BorderLayout.NORTH);
 
-        String[] columns = {"ID", "Pickup", "Drop", "Date / Time", "Service", "Vehicle / Cab", "Driver", "Fare", "Status"};
+        String[] columns = {"ID", "Pickup", "Drop", "Date / Time", "Service", "Vehicle / Cab", "Distance", "Driver", "Fare", "Status"};
         model = new DefaultTableModel(columns, 0) {
             @Override
             public boolean isCellEditable(int row, int column) {
@@ -52,6 +52,7 @@ public class CustomerReservationsPanel extends JPanel {
                     r.getDateTime(),
                     r.getServiceType(),
                     r.getVehicleDisplay(),
+                    r.getDistanceDisplay(),
                     r.getDriverName(),
                     String.format("\u20B9 %.0f", r.getFare()),
                     r.getStatus()

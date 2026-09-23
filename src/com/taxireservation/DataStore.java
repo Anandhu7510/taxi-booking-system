@@ -61,15 +61,24 @@ public class DataStore {
                                        String drop, String dateTime, String cabType,
                                        String driverName, double fare, String status) {
         return addReservation(customerName, customerPhone, pickup, drop, dateTime,
-                "Taxi + Driver", cabType, "", driverName, fare, status);
+                "Taxi + Driver", cabType, "", 0, driverName, fare, status);
     }
 
     public Reservation addReservation(String customerName, String customerPhone, String pickup,
                                        String drop, String dateTime, String serviceType,
                                        String cabType, String customerVehicle, String driverName,
                                        double fare, String status) {
+        return addReservation(customerName, customerPhone, pickup, drop, dateTime,
+                serviceType, cabType, customerVehicle, 0, driverName, fare, status);
+    }
+
+    public Reservation addReservation(String customerName, String customerPhone, String pickup,
+                                       String drop, String dateTime, String serviceType,
+                                       String cabType, String customerVehicle, double estimatedKm,
+                                       String driverName, double fare, String status) {
         Reservation r = new Reservation(nextReservationId++, customerName, customerPhone, pickup,
-                drop, dateTime, serviceType, cabType, customerVehicle, driverName, fare, status);
+                drop, dateTime, serviceType, cabType, customerVehicle, estimatedKm,
+                driverName, fare, status);
         reservations.add(r);
         return r;
     }
