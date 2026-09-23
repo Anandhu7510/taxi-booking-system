@@ -29,6 +29,9 @@ public class NewReservationPanel extends JPanel {
     private final JLabel lblFareValue = new JLabel("\u20B9 0");
     private final JLabel lblFareHint = new JLabel();
 
+    private final CardLayout vehicleCardLayout = new CardLayout();
+    private final JPanel vehicleDetailsPanel = new JPanel(vehicleCardLayout);
+
     private final DashboardHomePanel homePanel;
 
     public NewReservationPanel(DashboardHomePanel homePanel) {
@@ -49,6 +52,8 @@ public class NewReservationPanel extends JPanel {
         c.insets = new Insets(7, 8, 7, 8);
         c.fill = GridBagConstraints.HORIZONTAL;
 
+        buildVehicleDetailsPanel();
+
         int row = 0;
         addField(form, c, row++, "Customer Name", txtName);
         addField(form, c, row++, "Phone Number", txtPhone);
@@ -56,9 +61,7 @@ public class NewReservationPanel extends JPanel {
         addField(form, c, row++, "Drop Location", txtDrop);
         addField(form, c, row++, "Date / Time", txtDateTime);
         addField(form, c, row++, "Service Type", cboServiceType);
-        addField(form, c, row++, "Cab Type", cboCabType);
-        addField(form, c, row++, "Own Vehicle Type", txtOwnVehicleType);
-        addField(form, c, row++, "Own Vehicle Number", txtOwnVehicleNumber);
+        addField(form, c, row++, "Vehicle Details", vehicleDetailsPanel);
         addField(form, c, row++, "Assign Driver", cboDriver);
 
         c.gridx = 0;
@@ -119,6 +122,60 @@ public class NewReservationPanel extends JPanel {
         add(form, BorderLayout.CENTER);
     }
 
+    private void buildVehicleDetailsPanel() {
+        vehicleDetailsPanel.setOpaque(false);
+        vehicleDetailsPanel.setPreferredSize(new Dimension(360, 70));
+
+        JPanel taxiPanel = new JPanel(new BorderLayout());
+        taxiPanel.setOpaque(false);
+        cboCabType.setPreferredSize(new Dimension(280, 30));
+        taxiPanel.add(cboCabType, BorderLayout.NORTH);
+
+        JPanel ownVehiclePanel = new JPanel(new GridBagLayout());
+        ownVehiclePanel.setOpaque(false);
+
+        GridBagConstraints v = new GridBagConstraints();
+        v.insets = new Insets(2, 0, 4, 8);
+        v.fill = GridBagConstraints.HORIZONTAL;
+
+        JLabel typeLabel = new JLabel("Vehicle Type");
+        typeLabel.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+        JLabel numberLabel = new JLabel("Registration Number");
+        numberLabel.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+
+        txtOwnVehicleType.setPreferredSize(new Dimension(210, 28));
+        txtOwnVehicleNumber.setPreferredSize(new Dimension(210, 28));
+
+        // These fields stay normal editable JTextFields at all times.
+        txtOwnVehicleType.setEnabled(true);
+        txtOwnVehicleNumber.setEnabled(true);
+        txtOwnVehicleType.setEditable(true);
+        txtOwnVehicleNumber.setEditable(true);
+        txtOwnVehicleType.setFocusable(true);
+        txtOwnVehicleNumber.setFocusable(true);
+
+        v.gridx = 0;
+        v.gridy = 0;
+        v.weightx = 0;
+        ownVehiclePanel.add(typeLabel, v);
+
+        v.gridx = 1;
+        v.weightx = 1;
+        ownVehiclePanel.add(txtOwnVehicleType, v);
+
+        v.gridx = 0;
+        v.gridy = 1;
+        v.weightx = 0;
+        ownVehiclePanel.add(numberLabel, v);
+
+        v.gridx = 1;
+        v.weightx = 1;
+        ownVehiclePanel.add(txtOwnVehicleNumber, v);
+
+        vehicleDetailsPanel.add(taxiPanel, "TAXI");
+        vehicleDetailsPanel.add(ownVehiclePanel, "OWN");
+    }
+
     private void applyCustomerIdentity() {
         if (Session.hasRole("CUSTOMER") && Session.getCurrentUser() != null) {
             txtName.setText(Session.getCurrentUser().getDisplayName());
@@ -139,7 +196,9 @@ public class NewReservationPanel extends JPanel {
 
         c.gridx = 1;
         c.weightx = 1;
-        field.setPreferredSize(new Dimension(280, 30));
+        field.setPreferredSize(field == vehicleDetailsPanel
+                ? new Dimension(360, 70)
+                : new Dimension(280, 30));
         form.add(field, c);
     }
 
@@ -150,37 +209,17 @@ public class NewReservationPanel extends JPanel {
     private void updateServiceMode() {
         boolean driverOnly = isDriverOnlyMode();
 
-        cboCabType.setEnabled(!driverOnly);
-
-        // Keep the own-vehicle fields enabled at the component level so Windows
-        // Look & Feel cannot leave them stuck in a disabled state after switching modes.
-        txtOwnVehicleType.setEnabled(true);
-        txtOwnVehicleNumber.setEnabled(true);
-        txtOwnVehicleType.setEditable(driverOnly);
-        txtOwnVehicleNumber.setEditable(driverOnly);
-        txtOwnVehicleType.setFocusable(driverOnly);
-        txtOwnVehicleNumber.setFocusable(driverOnly);
+        vehicleCardLayout.show(vehicleDetailsPanel, driverOnly ? "OWN" : "TAXI");
 
         if (!driverOnly) {
             txtOwnVehicleType.setText("");
             txtOwnVehicleNumber.setText("");
         }
 
-        cboCabType.setToolTipText(driverOnly
-                ? "Not required when the customer provides the vehicle."
-                : "Choose the taxi category.");
-
-        txtOwnVehicleType.setToolTipText(driverOnly
-                ? "Enter your vehicle type, e.g. Hatchback, Sedan, SUV."
-                : "Used only for Driver Only service.");
-        txtOwnVehicleNumber.setToolTipText(driverOnly
-                ? "Enter your vehicle registration number."
-                : "Used only for Driver Only service.");
-
-        txtOwnVehicleType.setBackground(driverOnly ? Color.WHITE : new Color(0xF3F4F6));
-        txtOwnVehicleNumber.setBackground(driverOnly ? Color.WHITE : new Color(0xF3F4F6));
-
         updateFareEstimate();
+
+        vehicleDetailsPanel.revalidate();
+        vehicleDetailsPanel.repaint();
 
         if (driverOnly) {
             SwingUtilities.invokeLater(() -> txtOwnVehicleType.requestFocusInWindow());
