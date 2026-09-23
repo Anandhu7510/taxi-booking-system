@@ -107,7 +107,11 @@ public class NewReservationPanel extends JPanel {
         c.gridwidth = 1;
         form.add(btnConfirm, c);
 
-        cboServiceType.addActionListener(e -> updateServiceMode());
+        cboServiceType.addItemListener(e -> {
+            if (e.getStateChange() == java.awt.event.ItemEvent.SELECTED) {
+                updateServiceMode();
+            }
+        });
         cboCabType.addActionListener(e -> updateFareEstimate());
 
         applyCustomerIdentity();
@@ -140,24 +144,47 @@ public class NewReservationPanel extends JPanel {
     }
 
     private boolean isDriverOnlyMode() {
-        return "Driver Only (Own Vehicle)".equals(cboServiceType.getSelectedItem());
+        return cboServiceType.getSelectedIndex() == 1;
     }
 
     private void updateServiceMode() {
         boolean driverOnly = isDriverOnlyMode();
 
         cboCabType.setEnabled(!driverOnly);
-        txtOwnVehicleType.setEnabled(driverOnly);
-        txtOwnVehicleNumber.setEnabled(driverOnly);
+
+        // Keep the own-vehicle fields enabled at the component level so Windows
+        // Look & Feel cannot leave them stuck in a disabled state after switching modes.
+        txtOwnVehicleType.setEnabled(true);
+        txtOwnVehicleNumber.setEnabled(true);
+        txtOwnVehicleType.setEditable(driverOnly);
+        txtOwnVehicleNumber.setEditable(driverOnly);
+        txtOwnVehicleType.setFocusable(driverOnly);
+        txtOwnVehicleNumber.setFocusable(driverOnly);
+
+        if (!driverOnly) {
+            txtOwnVehicleType.setText("");
+            txtOwnVehicleNumber.setText("");
+        }
 
         cboCabType.setToolTipText(driverOnly
                 ? "Not required when the customer provides the vehicle."
                 : "Choose the taxi category.");
 
+        txtOwnVehicleType.setToolTipText(driverOnly
+                ? "Enter your vehicle type, e.g. Hatchback, Sedan, SUV."
+                : "Used only for Driver Only service.");
+        txtOwnVehicleNumber.setToolTipText(driverOnly
+                ? "Enter your vehicle registration number."
+                : "Used only for Driver Only service.");
+
         txtOwnVehicleType.setBackground(driverOnly ? Color.WHITE : new Color(0xF3F4F6));
         txtOwnVehicleNumber.setBackground(driverOnly ? Color.WHITE : new Color(0xF3F4F6));
 
         updateFareEstimate();
+
+        if (driverOnly) {
+            SwingUtilities.invokeLater(() -> txtOwnVehicleType.requestFocusInWindow());
+        }
     }
 
     private void updateFareEstimate() {
