@@ -1,109 +1,149 @@
-# Taxi & Driver Reservation System — Java Swing + MySQL JDBC
+# Taxi & Driver Reservation System — MySQL JDBC
 
-Java Swing desktop application with customer registration/login, administrator login,
-driver management, bookings, reservation history, and dashboard totals. Application
-records are now stored in MySQL instead of text files or in-memory ArrayLists.
+A plain Java Swing taxi/driver reservation desktop application. Customer registration,
+role-specific login, bookings, drivers, history, and dashboards use **MySQL** through
+JDBC. No web server, Maven, Spring, or GUI redesign is required.
 
-## Requirements
+## Easiest way to run on Windows (like VRMS)
 
-- JDK 17 or newer, plus NetBeans (or another Java IDE)
-- MySQL Server 8.0+ (Workbench optional)
-- MySQL Connector/J 8.0+ or 9.x JAR on compile and runtime classpaths
+1. Install **MySQL Community Server 8.0+** and **JDK 17+**. Configure the MySQL
+   password during installation. Make sure javac and java are in PATH.
+2. Clone/download this repository.
+3. **Double-click run.bat** from the project folder.
+4. The launcher checks for MySQL on localhost:3306. If a local MySQL Windows
+   service is stopped, it can request administrator permission to start it.
+5. On the first run, enter the **MySQL username and password** when prompted.
+   Typically the username is root and the password is the password set during
+   MySQL installation.
+6. The launcher validates your MySQL login and automatically creates the
+   taxi_booking database and its three tables when missing.
+7. On the first successful start, a small dialog asks you to **create your admin
+   username and password** (minimum eight characters). Then sign in as admin,
+   add a driver, register a customer, and create a booking.
 
-## Database setup
+**You do not manually download or attach a Connector/J JAR.** build.ps1
+automatically downloads the MySQL JDBC driver into lib/ on first use, then
+compiles the Java code with it. The JAR is ignored by Git and reused on later
+runs. Internet is needed for that first download only.
 
-Execute db/schema.sql in MySQL Workbench or the mysql CLI with a MySQL account that
-can create databases and tables. Then create a least-privileged application user
-(replace the password in the following illustrative statements):
+The MySQL Server itself **must be installed locally or reachable over the
+network**. The JDBC driver is not a substitute for the database server.
 
-    CREATE USER IF NOT EXISTS 'taxi_app'@'localhost' IDENTIFIED BY 'choose-a-strong-password';
-    GRANT SELECT, INSERT, UPDATE, DELETE ON taxi_booking.* TO 'taxi_app'@'localhost';
+### What run.bat does
 
-Set environment variables in the process launching Java:
+- Runs run.ps1, which calls build.ps1.
+- Checks Java and optionally starts a stopped local MySQL service.
+- Downloads MySQL Connector/J **9.7.0** from Maven Central if missing.
+- Compiles every src/com/taxireservation/*.java into out/.
+- Prompts for the local MySQL login on the first run.
+- Verifies the MySQL login before saving it or starting the app.
+- Saves the database login to .taxi-db.json using Windows user encryption.
+  It is not committed to Git. Invalid saved credentials are discarded.
+- Automatically creates missing MySQL tables, without deleting existing data.
+- Starts com.taxireservation.Main.
+- Stops a MySQL service on exit **only if this launcher started that service**.
+  An already-running MySQL service is left running.
+
+To forget saved MySQL credentials and enter them again:
+
+    .\run.bat -ResetDbConfig
+
+To compile only (with automatic driver download):
+
+    powershell -NoProfile -ExecutionPolicy Bypass -File .\build.ps1
+
+The launcher requires PowerShell (included with Windows) and internet access
+for the first JDBC-driver download.
+
+## First-run authentication
+
+The first administrator is created through an application prompt after MySQL
+initialization. A preconfigured administrator can also be supplied with
+TAXI_ADMIN_USERNAME and TAXI_ADMIN_PASSWORD environment variables before
+launch. Do not use the old public demo credentials
+admin@taxires.com / admin123. Customer passwords are salted PBKDF2 hashes.
+
+User data is stored in MySQL; the old data/users.txt has been removed. There is
+no automatic import of previous text-file users or in-memory demo records.
+Add drivers through the admin UI after the first launch.
+
+## Advanced: environment configuration
+
+The launcher defaults to the local database:
 
     TAXI_DB_URL=jdbc:mysql://localhost:3306/taxi_booking
-    TAXI_DB_USER=taxi_app
-    TAXI_DB_PASSWORD=your-database-password
-    TAXI_ADMIN_USERNAME=admin@example.com
-    TAXI_ADMIN_PASSWORD=choose-a-unique-admin-password
+    TAXI_DB_SERVER_URL=jdbc:mysql://localhost:3306/
+    TAXI_DB_USER=root
+    TAXI_DB_PASSWORD=<the password you supplied>
 
-The last two variables are required only on first launch if the database has no
-ADMIN account. The application creates the admin with a salted PBKDF2 hash, and
-never resets that password on subsequent launches. Use at least 8 characters.
-Do not commit real passwords to source control.
+For a custom MySQL host, set both TAXI_DB_URL and TAXI_DB_SERVER_URL, and ensure
+the MySQL user has access to that server. Environment variables override the
+saved login when TAXI_DB_PASSWORD is explicitly set. When using an account
+without CREATE DATABASE/CREATE TABLE permissions, initialize the schema with
+an administrator beforehand (see db/schema.sql).
 
-Windows / NetBeans: set the variables in Windows Environment Variables and restart
-NetBeans. Alternatively, start NetBeans from a PowerShell window in which the
-variables have been set, for example:
+PowerShell example for temporary environment settings in the current terminal:
 
-    $env:TAXI_DB_USER="taxi_app"
+    $env:TAXI_DB_USER = "taxi_app"
+    $env:TAXI_DB_PASSWORD = "your-password"
 
-## NetBeans launch
+The optional db/schema.sql file provides the same database structure for
+manual setup in MySQL Workbench or for instructors inspecting the schema.
+First-run auto-creation means Workbench is **optional**, not required.
 
-The repository contains plain Java sources, not a generated Ant or Maven project.
+## NetBeans (optional)
 
-1. File → New Project → Java with Ant → Java Application.
-   Name the project TaxiReservationSystem; uncheck Create Main Class.
-2. Copy src/com/taxireservation from this repository to the NetBeans project's
-   src/com/taxireservation folder (preserve the package structure).
-3. Project Properties → Libraries → Add JAR/Folder → select the MySQL
-   Connector/J JAR. Ensure it is also on the runtime classpath.
-4. Set main class to com.taxireservation.Main; then Clean and Build → Run.
+The repository contains hand-written Swing source code, rather than a generated
+NetBeans project or .form files.
 
-These are hand-written Swing files. NetBeans drag-and-drop GUI Builder requires
-NetBeans-generated .form files, which are not included.
+To use it inside NetBeans, create a Java with Ant → Java Application project
+without generating a Main Class, copy src/com/taxireservation into its source
+directory, and set the main class to com.taxireservation.Main.
 
-## Authentication
+If you use **NetBeans Run** rather than run.bat, add the locally downloaded
+lib/mysql-connector-j-9.7.0.jar to the project's Libraries and set the
+TAXI_DB_USER / TAXI_DB_PASSWORD environment variables for the Java process.
+Running run.bat instead avoids this manual IDE classpath setup.
 
-- Customers register and sign in via MySQL users; passwords are salted PBKDF2 hashes.
-- Admin sign-in is role-restricted to the initial ADMIN record.
-- Session contains the database account ID, username, role, and display name.
-- Customer reservations are matched to the user ID (not the display name).
-- Admin-created bookings without a registered customer are intentionally unlinked
-  to any customer account and remain visible in admin history only.
+## How persistence works
 
-The old data/users.txt store has been retired. The previous public example admin
-credentials admin@taxires.com / admin123 do not work in the new system. Do not
-reuse public demo passwords, including those recorded in Git history.
-Existing local users.txt data on other machines is not imported automatically;
-re-register customers or explicitly migrate their accounts.
+- MySQL users store password hashes and unique account identities; customer
+  history is filtered by user ID rather than matching display names.
+- MySQL drivers and reservations use database-generated IDs.
+- Booking creation atomically claims the driver and inserts a Pending booking.
+  On failure, the entire transaction is rolled back.
+- A driver with an active booking cannot be double-booked or manually removed.
+- Taxi + Driver selects only available drivers of the requested cab type;
+  Driver Only (Own Vehicle) selects any available driver.
+- Start Trip, Complete, and Cancel persist their changes. Completion and
+  cancellation free the associated driver.
+- Driver removal is a soft deletion to preserve existing booking history.
+- All dashboard totals and completed-trip revenue are loaded from MySQL.
 
-## Driver and booking flow
-
-- Driver and reservation IDs are generated by MySQL.
-- Taxi + Driver bookings only show available drivers with the selected cab type;
-  Driver Only (Own Vehicle) can use any available driver.
-- Booking creation atomically claims the driver and inserts a Pending reservation.
-  Any failure rolls back the whole transaction.
-- Admin can start a Pending trip, and complete or cancel an active booking.
-  Completion or cancellation releases the driver.
-- Assigned drivers cannot be removed or manually marked Available or Offline.
-- Driver removal is soft deletion; past bookings continue to display driver names.
-- Revenue counts completed bookings only.
-- All screens retrieve persistent data from MySQL.
-
-The former in-memory demo drivers and bookings are no longer auto-inserted on
-every application launch. Add drivers with the Admin dashboard.
+The original Swing screens and fare formula are otherwise unchanged.
 
 ## Troubleshooting
 
-- No suitable driver: add Connector/J to NetBeans compile AND runtime libraries.
-- Access denied: check TAXI_DB_USER/TAXI_DB_PASSWORD and user privileges.
-- Unknown database/table: run db/schema.sql in MySQL first.
-- No administrator: set TAXI_ADMIN_USERNAME/TAXI_ADMIN_PASSWORD for the first run.
-- Communications failure: start MySQL Server, confirm the hostname and port.
-- Driver cannot be claimed: refresh the driver list; another booking may have
-  allocated that driver, or it may be offline or a different cab type.
+- **javac is not recognized:** install JDK 17+ and add it to PATH.
+- **Connector download fails:** check internet, then rerun run.bat.
+- **MySQL not reachable:** start/install MySQL Server and confirm port 3306.
+- **Access denied:** enter the MySQL password chosen during installation,
+  or run `run.bat -ResetDbConfig` if a saved login was wrong.
+- **Insufficient database privileges:** use a database administrator for the
+  initial schema creation, then use a restricted MySQL account.
+- **Another MySQL host/port:** configure TAXI_DB_URL and TAXI_DB_SERVER_URL.
+- **Customer sees no history:** reservations are linked to the signed-in user
+  ID. Administrator-created bookings without that user ID are admin-only.
 
-## Smoke tests
+## Manual verification checklist
 
-1. Register, log in, restart, then log in again.
-2. Add a driver; restart and confirm persistence.
-3. Create a booking and verify driver becomes unavailable.
-4. Start, complete, or cancel an active booking and verify the driver is freed.
-5. Attempt to remove an assigned driver and confirm rejection.
-6. Register accounts with identical display names and verify history isolation.
-7. Verify dashboard totals/revenue after restart.
-8. Stop MySQL and confirm the app displays a clear connection error.
+1. Start with run.bat; sign in with the newly created administrator account.
+2. Add an available driver; restart the app and verify the driver remains.
+3. Register a customer; restart and sign in again.
+4. Book a trip; check the driver becomes unavailable and cannot be booked twice.
+5. Complete/cancel a booking; check the driver is available again.
+6. Register users with the same display name and verify private history.
+7. Restart and check booking history and revenue are unchanged.
 
-The existing Swing UI and fare formula are otherwise intentionally preserved.
+System requirement: JDK 17+, MySQL Server 8.0+, Windows PowerShell. There are
+no additional manually installed Java libraries when using run.bat.
