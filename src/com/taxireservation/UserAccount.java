@@ -1,23 +1,20 @@
 package com.taxireservation;
 
-/**
- * Simple authenticated user record used by the file-backed login flow.
- */
-public class UserAccount {
+/** Session identity; password hashes are never kept in a session object. */
+public final class UserAccount {
+    private final int id;
     private final String username;
-    private final String password;
     private final String role;
     private final String displayName;
 
-    public UserAccount(String username, String password, String role, String displayName) {
+    public UserAccount(int id, String username, String role, String displayName) {
+        this.id = id;
         this.username = username;
-        this.password = password;
         this.role = role;
         this.displayName = displayName;
     }
-
+    public int getId() { return id; }
     public String getUsername() { return username; }
-    public String getPassword() { return password; }
     public String getRole() { return role; }
     public String getDisplayName() { return displayName; }
 }

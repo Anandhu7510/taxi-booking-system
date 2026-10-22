@@ -41,22 +41,18 @@ public class CustomerReservationsPanel extends JPanel {
         model.setRowCount(0);
         UserAccount user = Session.getCurrentUser();
         if (user == null) return;
-
-        String customerName = user.getDisplayName();
-        for (Reservation r : DataStore.get().getReservations()) {
-            if (!r.getCustomerName().equalsIgnoreCase(customerName)) continue;
-            model.addRow(new Object[]{
-                    r.getId(),
-                    r.getPickupLocation(),
-                    r.getDropLocation(),
-                    r.getDateTime(),
-                    r.getServiceType(),
-                    r.getVehicleDisplay(),
-                    r.getDistanceDisplay(),
-                    r.getDriverName(),
-                    String.format("\u20B9 %.0f", r.getFare()),
-                    r.getStatus()
-            });
+        try {
+            for (Reservation r : DataStore.get().getReservationsForCustomer(user.getId())) {
+                model.addRow(new Object[]{
+                        r.getId(), r.getPickupLocation(), r.getDropLocation(), r.getDateTime(),
+                        r.getServiceType(), r.getVehicleDisplay(), r.getDistanceDisplay(),
+                        r.getDriverName(), String.format("\u20B9 %.0f", r.getFare()),
+                        r.getStatus()
+                });
+            }
+        } catch (IllegalStateException ex) {
+            JOptionPane.showMessageDialog(this, ex.getMessage(), "Database Error",
+                    JOptionPane.ERROR_MESSAGE);
         }
     }
 

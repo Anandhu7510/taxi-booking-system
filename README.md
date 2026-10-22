@@ -1,95 +1,109 @@
-# Taxi & Driver Reservation System — NetBeans Guide
+# Taxi & Driver Reservation System — Java Swing + MySQL JDBC
 
-A complete Java Swing desktop app: login, dashboard, new bookings, driver
-management, and reservation history — ready to run and easy to keep
-building on inside the NetBeans GUI Builder.
+Java Swing desktop application with customer registration/login, administrator login,
+driver management, bookings, reservation history, and dashboard totals. Application
+records are now stored in MySQL instead of text files or in-memory ArrayLists.
 
-## 1. Import into NetBeans
+## Requirements
 
-1. **File → New Project → Java with Ant → Java Application** (or "Java Application"
-   under the plain "Java" category). Name it `TaxiReservationSystem`, uncheck
-   "Create Main Class" (we already have one).
-2. In the Projects panel, delete the auto-generated empty `src` package if any.
-3. Right-click **Source Packages → Import → select this `src/com/taxireservation`
-   folder** (or just copy the `com` folder into your project's `src/` on disk,
-   then in NetBeans: right-click project → **Clean and Build**).
-4. Right-click `Main.java` → **Run File** (or set Project Properties → Run →
-   Main Class to `com.taxireservation.Main`, then hit the green Run button).
-5. The login-options screen opens. Choose Customer Login, Register, or Admin Login. For the demo admin account use **admin@taxires.com / admin123**.
+- JDK 17 or newer, plus NetBeans (or another Java IDE)
+- MySQL Server 8.0+ (Workbench optional)
+- MySQL Connector/J 8.0+ or 9.x JAR on compile and runtime classpaths
 
-No external libraries or database setup needed — it runs immediately with
-seeded sample data (drivers + bookings) held in memory.
+## Database setup
 
+Execute db/schema.sql in MySQL Workbench or the mysql CLI with a MySQL account that
+can create databases and tables. Then create a least-privileged application user
+(replace the password in the following illustrative statements):
 
-## Authentication flow
+    CREATE USER IF NOT EXISTS 'taxi_app'@'localhost' IDENTIFIED BY 'choose-a-strong-password';
+    GRANT SELECT, INSERT, UPDATE, DELETE ON taxi_booking.* TO 'taxi_app'@'localhost';
 
-The application now uses separate role-aware screens instead of hard-coded login logic:
+Set environment variables in the process launching Java:
 
-- **Customer Login** authenticates `CUSTOMER` accounts from `data/users.txt`.
-- **Register** creates new `CUSTOMER` accounts in `data/users.txt`.
-- **Admin Login** only accepts accounts whose role is `ADMIN`.
-- `Session` stores the signed-in account until logout.
-- Customers open the customer booking dashboard; administrator-only driver/reservation controls remain in the admin dashboard.
+    TAXI_DB_URL=jdbc:mysql://localhost:3306/taxi_booking
+    TAXI_DB_USER=taxi_app
+    TAXI_DB_PASSWORD=your-database-password
+    TAXI_ADMIN_USERNAME=admin@example.com
+    TAXI_ADMIN_PASSWORD=choose-a-unique-admin-password
 
-Demo administrator account is provisioned in `data/users.txt` as `admin@taxires.com / admin123`.
+The last two variables are required only on first launch if the database has no
+ADMIN account. The application creates the admin with a salted PBKDF2 hash, and
+never resets that password on subsequent launches. Use at least 8 characters.
+Do not commit real passwords to source control.
 
-## 2. What's included
+Windows / NetBeans: set the variables in Windows Environment Variables and restart
+NetBeans. Alternatively, start NetBeans from a PowerShell window in which the
+variables have been set, for example:
 
-| Screen | File | Features |
-|---|---|---|
-| Authentication | `LoginForm.java`, `CustomerLoginForm.java`, `AdminLoginForm.java`, `RegisterForm.java` | Role-aware customer/admin login, customer registration, file-backed accounts, session tracking |
-| Dashboard | `MainDashboard.java` + `DashboardHomePanel.java` | Sidebar nav (CardLayout), stat cards: total bookings, ongoing trips, completed, revenue |
-| New Booking | `NewReservationPanel.java` | Customer name/phone, pickup/drop, date-time, cab type, **live-updating fare estimate**, auto-filtered list of *available* drivers only |
-| Driver Management | `DriverManagementPanel.java` | Add driver (name, phone, license, vehicle no., type), table view, set Available/Offline, remove driver |
-| Reservations | `ReservationHistoryPanel.java` | Search by customer/location, filter by status, Mark Completed / Cancel (auto-frees the driver back to Available) |
-| Data | `DataStore.java` | Single in-memory source of truth shared by all screens — swap for JDBC later without touching any UI code |
-| Models | `Driver.java`, `Reservation.java` | Plain POJOs |
+    $env:TAXI_DB_USER="taxi_app"
 
-This covers the core feature set any taxi/driver reservation UI needs:
-auth, at-a-glance metrics, booking creation with fare + driver assignment,
-fleet management, and a searchable/filterable trip history with status
-workflow (Pending → Ongoing → Completed/Cancelled).
+## NetBeans launch
 
-## 3. Rebuilding each screen with the NetBeans GUI Builder (drag & drop)
+The repository contains plain Java sources, not a generated Ant or Maven project.
 
-Every panel file has a comment block at the top titled **"NetBeans GUI
-Builder equivalent"** describing exactly which components to drag from the
-**Palette** (Swing Controls) and how to lay them out with **GroupLayout**
-("Free Design," NetBeans's default). Quick summary:
+1. File → New Project → Java with Ant → Java Application.
+   Name the project TaxiReservationSystem; uncheck Create Main Class.
+2. Copy src/com/taxireservation from this repository to the NetBeans project's
+   src/com/taxireservation folder (preserve the package structure).
+3. Project Properties → Libraries → Add JAR/Folder → select the MySQL
+   Connector/J JAR. Ensure it is also on the runtime classpath.
+4. Set main class to com.taxireservation.Main; then Clean and Build → Run.
 
-- **New JFrame Form / New JPanel Form**: right-click the package →
-  **New → Other → Swing GUI Forms → JFrame Form** (for `LoginForm`,
-  `MainDashboard`) or **JPanel Form** (for the three feature panels).
-- Drag `JLabel`, `JTextField`, `JComboBox`, `JButton`, `JTable` from the
-  **Palette** onto the **Design** canvas; snap-align using the blue guide
-  lines NetBeans shows automatically (that's GroupLayout doing its thing).
-- Rename each component in the **Properties → Code → Variable Name** field
-  to match names like `txtName`, `cboCabType`, `tblReservations` — makes the
-  generated code readable.
-- Double-click a button in Design view to jump straight to its
-  `actionPerformed` handler in the **Source** view — paste in the matching
-  logic from my files (e.g. `confirmBooking()`, `addDriver()`).
-- For the `JTable`s, right-click → **Table Contents...** to define columns,
-  or just do it in code with `DefaultTableModel` as I did — easier to keep
-  in sync with `DataStore`.
+These are hand-written Swing files. NetBeans drag-and-drop GUI Builder requires
+NetBeans-generated .form files, which are not included.
 
-**Important:** the files I generated are plain hand-written Swing code, so
-they'll compile, run, and can be freely edited in NetBeans's **Source**
-view — but the **Design (drag-and-drop) view** only renders for files
-NetBeans itself generated via "New JFrame/JPanel Form" (it needs its own
-`// GEN-BEGIN`/`// GEN-END` markers). If you want live drag-and-drop editing
-of a screen, create a fresh Form via the wizard above and rebuild it using
-the component list in that file's header comment — then copy over the event
-logic.
+## Authentication
 
-## 4. Natural next steps
+- Customers register and sign in via MySQL users; passwords are salted PBKDF2 hashes.
+- Admin sign-in is role-restricted to the initial ADMIN record.
+- Session contains the database account ID, username, role, and display name.
+- Customer reservations are matched to the user ID (not the display name).
+- Admin-created bookings without a registered customer are intentionally unlinked
+  to any customer account and remain visible in admin history only.
 
-- **Persistence**: replace the internals of `DataStore.java` with JDBC calls
-  (MySQL/SQLite) — the rest of the app won't need to change since every
-  screen only talks to `DataStore.get()`.
-- **Real fare calculation**: hook `updateFareEstimate()` in
-  `NewReservationPanel` up to a distance API or a per-km rate instead of the
-  flat per-type estimate.
-- **Roles**: add a customer-facing login mode vs. admin/dispatcher mode.
-- **Notifications**: use a `Timer` to simulate driver location/status
-  updates, or wire in real GPS data.
+The old data/users.txt store has been retired. The previous public example admin
+credentials admin@taxires.com / admin123 do not work in the new system. Do not
+reuse public demo passwords, including those recorded in Git history.
+Existing local users.txt data on other machines is not imported automatically;
+re-register customers or explicitly migrate their accounts.
+
+## Driver and booking flow
+
+- Driver and reservation IDs are generated by MySQL.
+- Taxi + Driver bookings only show available drivers with the selected cab type;
+  Driver Only (Own Vehicle) can use any available driver.
+- Booking creation atomically claims the driver and inserts a Pending reservation.
+  Any failure rolls back the whole transaction.
+- Admin can start a Pending trip, and complete or cancel an active booking.
+  Completion or cancellation releases the driver.
+- Assigned drivers cannot be removed or manually marked Available or Offline.
+- Driver removal is soft deletion; past bookings continue to display driver names.
+- Revenue counts completed bookings only.
+- All screens retrieve persistent data from MySQL.
+
+The former in-memory demo drivers and bookings are no longer auto-inserted on
+every application launch. Add drivers with the Admin dashboard.
+
+## Troubleshooting
+
+- No suitable driver: add Connector/J to NetBeans compile AND runtime libraries.
+- Access denied: check TAXI_DB_USER/TAXI_DB_PASSWORD and user privileges.
+- Unknown database/table: run db/schema.sql in MySQL first.
+- No administrator: set TAXI_ADMIN_USERNAME/TAXI_ADMIN_PASSWORD for the first run.
+- Communications failure: start MySQL Server, confirm the hostname and port.
+- Driver cannot be claimed: refresh the driver list; another booking may have
+  allocated that driver, or it may be offline or a different cab type.
+
+## Smoke tests
+
+1. Register, log in, restart, then log in again.
+2. Add a driver; restart and confirm persistence.
+3. Create a booking and verify driver becomes unavailable.
+4. Start, complete, or cancel an active booking and verify the driver is freed.
+5. Attempt to remove an assigned driver and confirm rejection.
+6. Register accounts with identical display names and verify history isolation.
+7. Verify dashboard totals/revenue after restart.
+8. Stop MySQL and confirm the app displays a clear connection error.
+
+The existing Swing UI and fare formula are otherwise intentionally preserved.

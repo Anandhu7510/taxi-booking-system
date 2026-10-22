@@ -1,97 +1,70 @@
 package com.taxireservation;
 
-import java.util.ArrayList;
+import java.sql.SQLException;
 import java.util.List;
 
-/**
- * Central in-memory data store (Singleton).
- * Swap the internals of this class for JDBC calls to MySQL/SQLite
- * later without touching any of the UI panels.
- */
-public class DataStore {
+/** Existing UI-facing facade. MySQL is the sole persistent source of truth. */
+public final class DataStore {
     private static final DataStore INSTANCE = new DataStore();
+    private DataStore() {}
     public static DataStore get() { return INSTANCE; }
 
-    private final List<Driver> drivers = new ArrayList<>();
-    private final List<Reservation> reservations = new ArrayList<>();
-    private int nextDriverId = 1;
-    private int nextReservationId = 1001;
-
-    private DataStore() {
-        // seed sample data so the app looks alive on first run
-        addDriver("Ramesh Kumar", "9876500001", "DL-45-9981", "TN09-AB-1234", "Sedan", "Available");
-        addDriver("Suresh Babu", "9876500002", "DL-45-3321", "TN09-CD-5678", "SUV", "Available");
-        addDriver("Anita Rao", "9876500003", "DL-45-7765", "TN09-EF-9012", "Mini", "On Trip");
-        addDriver("Vikram Singh", "9876500004", "DL-45-1190", "TN09-GH-3456", "Luxury", "Offline");
-
-        addReservation("John Mathew", "9000011111", "Airport", "Downtown Mall",
-                "2026-09-09 10:30", "Sedan", "Ramesh Kumar", 420.0, "Ongoing");
-        addReservation("Priya Nair", "9000022222", "Railway Station", "Tech Park",
-                "2026-09-09 08:15", "Mini", "Anita Rao", 260.0, "Completed");
-        addReservation("Farhan Ali", "9000033333", "Hotel Taj", "City Center",
-                "2026-09-08 19:00", "SUV", "Suresh Babu", 540.0, "Completed");
+    public List<Driver> getDrivers() {
+        try { return DriverDAO.list(); }
+        catch (SQLException ex) { throw failure(ex); }
     }
-
-    // ---------- Drivers ----------
-    public List<Driver> getDrivers() { return drivers; }
-
-    public List<Driver> getAvailableDrivers() {
-        List<Driver> result = new ArrayList<>();
-        for (Driver d : drivers) if (d.getStatus().equals("Available")) result.add(d);
-        return result;
+    public List<Driver> getAvailableDrivers(String vehicleType) {
+        try { return DriverDAO.available(vehicleType); }
+        catch (SQLException ex) { throw failure(ex); }
     }
-
-    public Driver addDriver(String name, String phone, String licenseNo,
-                             String vehicleNumber, String vehicleType, String status) {
-        Driver d = new Driver(nextDriverId++, name, phone, licenseNo, vehicleNumber, vehicleType, status);
-        drivers.add(d);
-        return d;
+    public void addDriver(String name, String phone, String licenseNo, String vehicleNumber,
+                          String vehicleType, String status) {
+        if (!"Available".equals(status)) throw new IllegalArgumentException("Invalid initial status.");
+        try { DriverDAO.add(name, phone, licenseNo, vehicleNumber, vehicleType); }
+        catch (SQLException ex) { throw failure(ex); }
     }
-
-    public void removeDriver(Driver d) { drivers.remove(d); }
-
-    public void setDriverStatus(String driverName, String status) {
-        for (Driver d : drivers) if (d.getName().equals(driverName)) d.setStatus(status);
+    public void removeDriver(int id) {
+        try { DriverDAO.remove(id); }
+        catch (SQLException ex) { throw failure(ex); }
     }
-
-    // ---------- Reservations ----------
-    public List<Reservation> getReservations() { return reservations; }
-
-    public Reservation addReservation(String customerName, String customerPhone, String pickup,
-                                       String drop, String dateTime, String cabType,
-                                       String driverName, double fare, String status) {
-        return addReservation(customerName, customerPhone, pickup, drop, dateTime,
-                "Taxi + Driver", cabType, "", 0, driverName, fare, status);
+    public void setDriverStatus(int id, String status) {
+        try { DriverDAO.setManualStatus(id, status); }
+        catch (SQLException ex) { throw failure(ex); }
     }
-
-    public Reservation addReservation(String customerName, String customerPhone, String pickup,
-                                       String drop, String dateTime, String serviceType,
-                                       String cabType, String customerVehicle, String driverName,
-                                       double fare, String status) {
-        return addReservation(customerName, customerPhone, pickup, drop, dateTime,
-                serviceType, cabType, customerVehicle, 0, driverName, fare, status);
+    public List<Reservation> getReservations() {
+        try { return ReservationDAO.list(null); }
+        catch (SQLException ex) { throw failure(ex); }
     }
-
-    public Reservation addReservation(String customerName, String customerPhone, String pickup,
-                                       String drop, String dateTime, String serviceType,
-                                       String cabType, String customerVehicle, double estimatedKm,
-                                       String driverName, double fare, String status) {
-        Reservation r = new Reservation(nextReservationId++, customerName, customerPhone, pickup,
-                drop, dateTime, serviceType, cabType, customerVehicle, estimatedKm,
-                driverName, fare, status);
-        reservations.add(r);
-        return r;
+    public List<Reservation> getReservationsForCustomer(int customerId) {
+        try { return ReservationDAO.list(customerId); }
+        catch (SQLException ex) { throw failure(ex); }
     }
-
+    public void bookReservation(Integer customerId, String customerName, String customerPhone,
+                                String pickup, String drop, String dateTime, String serviceType,
+                                String cabType, String customerVehicle, double estimatedKm,
+                                int driverId, double fare) {
+        try {
+            ReservationDAO.book(customerId, customerName, customerPhone, pickup, drop, dateTime,
+                    serviceType, cabType, customerVehicle, estimatedKm, driverId, fare);
+        } catch (SQLException ex) { throw failure(ex); }
+    }
+    public void updateReservationStatus(int reservationId, String status) {
+        try { ReservationDAO.changeStatus(reservationId, status); }
+        catch (SQLException ex) { throw failure(ex); }
+    }
     public int countByStatus(String status) {
-        int c = 0;
-        for (Reservation r : reservations) if (r.getStatus().equals(status)) c++;
-        return c;
+        int count = 0;
+        for (Reservation reservation : getReservations())
+            if (status.equals(reservation.getStatus())) count++;
+        return count;
     }
-
     public double totalRevenue() {
-        double t = 0;
-        for (Reservation r : reservations) if (r.getStatus().equals("Completed")) t += r.getFare();
-        return t;
+        double total = 0;
+        for (Reservation reservation : getReservations())
+            if ("Completed".equals(reservation.getStatus())) total += reservation.getFare();
+        return total;
+    }
+    private static IllegalStateException failure(SQLException ex) {
+        return new IllegalStateException("MySQL operation failed: " + ex.getMessage(), ex);
     }
 }
