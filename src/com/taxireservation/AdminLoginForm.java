@@ -3,7 +3,7 @@ package com.taxireservation;
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import java.awt.*;
-import java.io.IOException;
+import java.sql.SQLException;
 
 /** Administrator-only login screen. */
 public class AdminLoginForm extends JFrame {
@@ -87,8 +87,8 @@ public class AdminLoginForm extends JFrame {
             Session.login(account);
             dispose();
             SwingUtilities.invokeLater(() -> new MainDashboard().setVisible(true));
-        } catch (IOException ex) {
-            showError("Unable to read user accounts: " + ex.getMessage());
+        } catch (SQLException ex) {
+            showError("Unable to access MySQL: " + ex.getMessage());
         }
     }
 

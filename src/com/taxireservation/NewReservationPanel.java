@@ -117,7 +117,10 @@ public class NewReservationPanel extends JPanel {
                 updateServiceMode();
             }
         });
-        cboCabType.addActionListener(e -> updateFareEstimate());
+        cboCabType.addActionListener(e -> {
+            updateFareEstimate();
+            refreshDriverList();
+        });
 
         txtEstimatedKm.getDocument().addDocumentListener(new DocumentListener() {
             @Override
@@ -229,6 +232,7 @@ public class NewReservationPanel extends JPanel {
         }
 
         updateFareEstimate();
+        refreshDriverList();
 
         vehicleDetailsPanel.revalidate();
         vehicleDetailsPanel.repaint();
@@ -241,7 +245,7 @@ public class NewReservationPanel extends JPanel {
     private double readEstimatedKm() {
         try {
             double km = Double.parseDouble(txtEstimatedKm.getText().trim());
-            return km > 0 ? km : -1;
+            return Double.isFinite(km) && km > 0 ? km : -1;
         } catch (NumberFormatException ex) {
             return -1;
         }
@@ -297,7 +301,6 @@ public class NewReservationPanel extends JPanel {
     public void setVisible(boolean visible) {
         if (visible) {
             applyCustomerIdentity();
-            refreshDriverList();
             updateServiceMode();
         }
         super.setVisible(visible);
@@ -305,13 +308,21 @@ public class NewReservationPanel extends JPanel {
 
     private void refreshDriverList() {
         Driver selected = (Driver) cboDriver.getSelectedItem();
+        Integer selectedId = selected == null ? null : selected.getId();
         cboDriver.removeAllItems();
 
-        for (Driver driver : DataStore.get().getAvailableDrivers()) {
-            cboDriver.addItem(driver);
+        String requiredType = isDriverOnlyMode() ? null : (String) cboCabType.getSelectedItem();
+        try {
+            for (Driver driver : DataStore.get().getAvailableDrivers(requiredType)) {
+                cboDriver.addItem(driver);
+                if (selectedId != null && selectedId == driver.getId()) {
+                    cboDriver.setSelectedItem(driver);
+                }
+            }
+        } catch (IllegalStateException ex) {
+            JOptionPane.showMessageDialog(this, ex.getMessage(), "Database Error",
+                    JOptionPane.ERROR_MESSAGE);
         }
-
-        if (selected != null) cboDriver.setSelectedItem(selected);
     }
 
     private void confirmBooking() {
@@ -358,22 +369,20 @@ public class NewReservationPanel extends JPanel {
 
         double fare = Double.parseDouble(lblFareValue.getText().replace("\u20B9", "").trim());
 
-        DataStore.get().addReservation(
-                txtName.getText(),
-                txtPhone.getText(),
-                txtPickup.getText(),
-                txtDrop.getText(),
-                txtDateTime.getText(),
-                serviceType,
-                cabType,
-                customerVehicle,
-                estimatedKm,
-                driver.getName(),
-                fare,
-                "Pending"
-        );
-
-        DataStore.get().setDriverStatus(driver.getName(), "On Trip");
+        Integer customerId = Session.hasRole("CUSTOMER")
+                ? Session.getCurrentUser().getId() : null;
+        try {
+            DataStore.get().bookReservation(
+                    customerId, txtName.getText(), txtPhone.getText(),
+                    txtPickup.getText(), txtDrop.getText(), txtDateTime.getText(),
+                    serviceType, cabType, customerVehicle, estimatedKm,
+                    driver.getId(), fare);
+        } catch (IllegalStateException ex) {
+            JOptionPane.showMessageDialog(this, ex.getMessage(), "Unable to Confirm Booking",
+                    JOptionPane.ERROR_MESSAGE);
+            refreshDriverList();
+            return;
+        }
 
         JOptionPane.showMessageDialog(this,
                 String.format("Booking confirmed for %.1f km. Estimated fare: \u20B9%.0f",

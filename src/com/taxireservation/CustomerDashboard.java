@@ -211,15 +211,21 @@ public class CustomerDashboard extends JFrame {
         UserAccount user = Session.getCurrentUser();
         if (user == null) return;
 
-        String customerName = user.getDisplayName();
+        java.util.List<Reservation> userReservations;
+        try {
+            userReservations = DataStore.get().getReservationsForCustomer(user.getId());
+        } catch (IllegalStateException ex) {
+            JOptionPane.showMessageDialog(this, ex.getMessage(), "Database Error",
+                    JOptionPane.ERROR_MESSAGE);
+            return;
+        }
         int total = 0;
         int active = 0;
         int completed = 0;
         double spent = 0;
         Reservation currentRide = null;
 
-        for (Reservation reservation : DataStore.get().getReservations()) {
-            if (!reservation.getCustomerName().equalsIgnoreCase(customerName)) continue;
+        for (Reservation reservation : userReservations) {
 
             total++;
             if (isActive(reservation)) {
@@ -238,7 +244,7 @@ public class CustomerDashboard extends JFrame {
         lblTotalSpent.setText(String.format("\u20B9 %.0f", spent));
 
         refreshCurrentRide(currentRide);
-        refreshRecentReservations(customerName);
+        refreshRecentReservations(userReservations);
     }
 
     private boolean isActive(Reservation reservation) {
@@ -319,21 +325,16 @@ public class CustomerDashboard extends JFrame {
         currentRidePanel.repaint();
     }
 
-    private void refreshRecentReservations(String customerName) {
+    private void refreshRecentReservations(java.util.List<Reservation> reservations) {
         recentModel.setRowCount(0);
         int added = 0;
-
-        for (int i = DataStore.get().getReservations().size() - 1; i >= 0 && added < 3; i--) {
-            Reservation reservation = DataStore.get().getReservations().get(i);
-            if (!reservation.getCustomerName().equalsIgnoreCase(customerName)) continue;
-
+        for (int i = reservations.size() - 1; i >= 0 && added < 3; i--) {
+            Reservation reservation = reservations.get(i);
             recentModel.addRow(new Object[]{
                     reservation.getPickupLocation() + " \u2192 " + reservation.getDropLocation(),
-                    reservation.getDateTime(),
-                    reservation.getServiceType(),
+                    reservation.getDateTime(), reservation.getServiceType(),
                     reservation.getDistanceDisplay(),
-                    String.format("\u20B9 %.0f", reservation.getFare()),
-                    reservation.getStatus()
+                    String.format("\u20B9 %.0f", reservation.getFare()), reservation.getStatus()
             });
             added++;
         }

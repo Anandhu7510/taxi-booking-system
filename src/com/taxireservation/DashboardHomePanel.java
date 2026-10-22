@@ -70,10 +70,27 @@ public class DashboardHomePanel extends JPanel {
     }
 
     public void refresh() {
-        DataStore ds = DataStore.get();
-        lblTotal.setText(String.valueOf(ds.getReservations().size()));
-        lblOngoing.setText(String.valueOf(ds.countByStatus("Ongoing")));
-        lblCompleted.setText(String.valueOf(ds.countByStatus("Completed")));
-        lblRevenue.setText(String.format("%.0f", ds.totalRevenue()));
+        try {
+            java.util.List<Reservation> reservations = DataStore.get().getReservations();
+            int ongoing = 0;
+            int completed = 0;
+            double revenue = 0;
+            for (Reservation reservation : reservations) {
+                if ("Ongoing".equals(reservation.getStatus())) ongoing++;
+                if ("Completed".equals(reservation.getStatus())) {
+                    completed++;
+                    revenue += reservation.getFare();
+                }
+            }
+            lblTotal.setText(String.valueOf(reservations.size()));
+            lblOngoing.setText(String.valueOf(ongoing));
+            lblCompleted.setText(String.valueOf(completed));
+            lblRevenue.setText(String.format("%.0f", revenue));
+        } catch (IllegalStateException ex) {
+            JOptionPane.showMessageDialog(this, ex.getMessage(), "Database Error",
+                    JOptionPane.ERROR_MESSAGE);
+        }
     }
+
+    
 }

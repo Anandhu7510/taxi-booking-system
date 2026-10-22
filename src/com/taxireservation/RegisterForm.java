@@ -3,7 +3,7 @@ package com.taxireservation;
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import java.awt.*;
-import java.io.IOException;
+import java.sql.SQLException;
 
 /** Customer self-registration screen. */
 public class RegisterForm extends JFrame {
@@ -92,8 +92,8 @@ public class RegisterForm extends JFrame {
             showError("Username cannot contain the | character.");
             return;
         }
-        if (password.length() < 4) {
-            showError("Password must contain at least 4 characters.");
+        if (password.length() < 8) {
+            showError("Password must contain at least 8 characters.");
             return;
         }
         if (!password.equals(confirm)) {
@@ -112,8 +112,8 @@ public class RegisterForm extends JFrame {
                     "Registration Complete", JOptionPane.INFORMATION_MESSAGE);
             dispose();
             SwingUtilities.invokeLater(() -> new CustomerLoginForm(username).setVisible(true));
-        } catch (IOException ex) {
-            showError("Unable to save the account: " + ex.getMessage());
+        } catch (SQLException ex) {
+            showError("Unable to save the account in MySQL: " + ex.getMessage());
         }
     }
 

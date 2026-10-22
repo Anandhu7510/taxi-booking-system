@@ -101,10 +101,14 @@ public class DriverManagementPanel extends JPanel {
 
     private void loadDrivers() {
         model.setRowCount(0);
-        List<Driver> drivers = DataStore.get().getDrivers();
-        for (Driver d : drivers) {
-            model.addRow(new Object[]{d.getId(), d.getName(), d.getPhone(), d.getLicenseNo(),
-                    d.getVehicleNumber(), d.getVehicleType(), d.getStatus()});
+        try {
+            for (Driver d : DataStore.get().getDrivers()) {
+                model.addRow(new Object[]{d.getId(), d.getName(), d.getPhone(), d.getLicenseNo(),
+                        d.getVehicleNumber(), d.getVehicleType(), d.getStatus()});
+            }
+        } catch (IllegalStateException ex) {
+            JOptionPane.showMessageDialog(this, ex.getMessage(), "Database Error",
+                    JOptionPane.ERROR_MESSAGE);
         }
     }
 
@@ -115,10 +119,15 @@ public class DriverManagementPanel extends JPanel {
                     "Missing Information", JOptionPane.WARNING_MESSAGE);
             return;
         }
-        DataStore.get().addDriver(txtName.getText(), txtPhone.getText(), txtLicense.getText(),
-                txtVehicleNo.getText(), (String) cboType.getSelectedItem(), "Available");
-        txtName.setText(""); txtPhone.setText(""); txtLicense.setText(""); txtVehicleNo.setText("");
-        loadDrivers();
+        try {
+            DataStore.get().addDriver(txtName.getText(), txtPhone.getText(), txtLicense.getText(),
+                    txtVehicleNo.getText(), (String) cboType.getSelectedItem(), "Available");
+            txtName.setText(""); txtPhone.setText(""); txtLicense.setText(""); txtVehicleNo.setText("");
+            loadDrivers();
+        } catch (RuntimeException ex) {
+            JOptionPane.showMessageDialog(this, ex.getMessage(), "Unable to Add Driver",
+                    JOptionPane.ERROR_MESSAGE);
+        }
     }
 
     private void updateSelectedStatus(String status) {
@@ -128,9 +137,14 @@ public class DriverManagementPanel extends JPanel {
                     JOptionPane.WARNING_MESSAGE);
             return;
         }
-        String name = (String) model.getValueAt(row, 1);
-        DataStore.get().setDriverStatus(name, status);
-        loadDrivers();
+        int id = (int) model.getValueAt(row, 0);
+        try {
+            DataStore.get().setDriverStatus(id, status);
+            loadDrivers();
+        } catch (RuntimeException ex) {
+            JOptionPane.showMessageDialog(this, ex.getMessage(), "Unable to Update Driver",
+                    JOptionPane.ERROR_MESSAGE);
+        }
     }
 
     private void removeSelected() {
@@ -141,10 +155,13 @@ public class DriverManagementPanel extends JPanel {
             return;
         }
         int id = (int) model.getValueAt(row, 0);
-        Driver toRemove = null;
-        for (Driver d : DataStore.get().getDrivers()) if (d.getId() == id) toRemove = d;
-        if (toRemove != null) DataStore.get().removeDriver(toRemove);
-        loadDrivers();
+        try {
+            DataStore.get().removeDriver(id);
+            loadDrivers();
+        } catch (RuntimeException ex) {
+            JOptionPane.showMessageDialog(this, ex.getMessage(), "Unable to Remove Driver",
+                    JOptionPane.ERROR_MESSAGE);
+        }
     }
 
     @Override

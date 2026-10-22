@@ -89,6 +89,10 @@ public class ReservationHistoryPanel extends JPanel {
         btnCancel.setFocusPainted(false);
         btnCancel.addActionListener(e -> updateSelectedStatus("Cancelled"));
 
+        JButton btnStart = new JButton("Start Trip");
+        btnStart.addActionListener(e -> updateSelectedStatus("Ongoing"));
+
+        p.add(btnStart);
         p.add(btnComplete);
         p.add(btnCancel);
         return p;
@@ -98,20 +102,23 @@ public class ReservationHistoryPanel extends JPanel {
         model.setRowCount(0);
         String query = txtSearch.getText().trim().toLowerCase();
         String statusFilter = (String) cboStatusFilter.getSelectedItem();
-
-        List<Reservation> reservations = DataStore.get().getReservations();
-        for (Reservation r : reservations) {
-            boolean matchesQuery = query.isEmpty()
-                    || r.getCustomerName().toLowerCase().contains(query)
-                    || r.getPickupLocation().toLowerCase().contains(query)
-                    || r.getDropLocation().toLowerCase().contains(query);
-            boolean matchesStatus = "All".equals(statusFilter) || r.getStatus().equals(statusFilter);
-            if (matchesQuery && matchesStatus) {
-                model.addRow(new Object[]{r.getId(), r.getCustomerName(), r.getCustomerPhone(),
-                        r.getPickupLocation(), r.getDropLocation(), r.getDateTime(), r.getServiceType(),
-                        r.getVehicleDisplay(), r.getDistanceDisplay(), r.getDriverName(),
-                        String.format("\u20B9%.0f", r.getFare()), r.getStatus()});
+        try {
+            for (Reservation r : DataStore.get().getReservations()) {
+                boolean matchesQuery = query.isEmpty()
+                        || r.getCustomerName().toLowerCase().contains(query)
+                        || r.getPickupLocation().toLowerCase().contains(query)
+                        || r.getDropLocation().toLowerCase().contains(query);
+                boolean matchesStatus = "All".equals(statusFilter) || r.getStatus().equals(statusFilter);
+                if (matchesQuery && matchesStatus) {
+                    model.addRow(new Object[]{r.getId(), r.getCustomerName(), r.getCustomerPhone(),
+                            r.getPickupLocation(), r.getDropLocation(), r.getDateTime(), r.getServiceType(),
+                            r.getVehicleDisplay(), r.getDistanceDisplay(), r.getDriverName(),
+                            String.format("\u20B9%.0f", r.getFare()), r.getStatus()});
+                }
             }
+        } catch (IllegalStateException ex) {
+            JOptionPane.showMessageDialog(this, ex.getMessage(), "Database Error",
+                    JOptionPane.ERROR_MESSAGE);
         }
     }
 
@@ -123,15 +130,14 @@ public class ReservationHistoryPanel extends JPanel {
             return;
         }
         int id = (int) model.getValueAt(row, 0);
-        String driverName = (String) model.getValueAt(row, 9);
-        for (Reservation r : DataStore.get().getReservations()) {
-            if (r.getId() == id) r.setStatus(status);
+        try {
+            DataStore.get().updateReservationStatus(id, status);
+            loadReservations();
+            if (homePanel != null) homePanel.refresh();
+        } catch (IllegalStateException ex) {
+            JOptionPane.showMessageDialog(this, ex.getMessage(), "Unable to Update Booking",
+                    JOptionPane.ERROR_MESSAGE);
         }
-        if (!status.equals("Ongoing")) {
-            DataStore.get().setDriverStatus(driverName, "Available");
-        }
-        loadReservations();
-        if (homePanel != null) homePanel.refresh();
     }
 
     @Override
