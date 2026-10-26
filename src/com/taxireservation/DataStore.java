@@ -43,6 +43,10 @@ public final class DataStore {
                                 String pickup, String drop, String dateTime, String serviceType,
                                 String cabType, String customerVehicle, double estimatedKm,
                                 int driverId, double fare) {
+        if (!Session.hasRole("CUSTOMER") || customerId == null
+                || customerId.intValue() != Session.getCurrentUser().getId()) {
+            throw new IllegalStateException("Only the signed-in customer can create a booking.");
+        }
         try {
             ReservationDAO.book(customerId, customerName, customerPhone, pickup, drop, dateTime,
                     serviceType, cabType, customerVehicle, estimatedKm, driverId, fare);

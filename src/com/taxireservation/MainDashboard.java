@@ -10,10 +10,9 @@ import java.awt.*;
  * NetBeans GUI Builder equivalent:
  *  - JFrame Form, set root layout to BorderLayout
  *  - Add a JPanel "sidebar" to the WEST, layout BoxLayout (Y_AXIS), dark background
- *  - Add JButtons for each menu item (Dashboard, New Booking, Drivers, History, Logout)
+ *  - Add JButtons for each admin menu item (Dashboard, Drivers, History, Logout)
  *  - Add a JPanel "contentPanel" to the CENTER with CardLayout
- *  - Drop each screen's panel (NewReservationPanel, DriverManagementPanel,
- *    ReservationHistoryPanel) into contentPanel as separate "cards"
+ *  - Add DriverManagementPanel and ReservationHistoryPanel as content cards
  *  - Wire each sidebar button's actionPerformed to call cardLayout.show(...)
  */
 public class MainDashboard extends JFrame {
@@ -41,7 +40,6 @@ public class MainDashboard extends JFrame {
 
         homePanel = new DashboardHomePanel();
         contentPanel.add(homePanel, "HOME");
-        contentPanel.add(new NewReservationPanel(homePanel), "BOOKING");
         contentPanel.add(new DriverManagementPanel(), "DRIVERS");
         contentPanel.add(new ReservationHistoryPanel(homePanel), "HISTORY");
 
@@ -66,7 +64,6 @@ public class MainDashboard extends JFrame {
             homePanel.refresh();
             cardLayout.show(contentPanel, "HOME");
         }));
-        sidebar.add(navButton("\u2795  New Booking", () -> cardLayout.show(contentPanel, "BOOKING")));
         sidebar.add(navButton("\uD83D\uDE97  Drivers", () -> cardLayout.show(contentPanel, "DRIVERS")));
         sidebar.add(navButton("\uD83D\uDCCB  Reservations", () -> {
             cardLayout.show(contentPanel, "HISTORY");

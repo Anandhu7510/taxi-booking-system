@@ -19,7 +19,7 @@ JDBC. No web server, Maven, Spring, or GUI redesign is required.
    taxi_booking database and its three tables when missing.
 7. On the first successful start, a small dialog asks you to **create your admin
    username and password** (minimum eight characters). Then sign in as admin,
-   add a driver, register a customer, and create a booking.
+   add a driver, then register/sign in as a customer to create a booking.
 
 **You do not manually download or attach a Connector/J JAR.** build.ps1
 automatically downloads the MySQL JDBC driver into lib/ on first use, then
@@ -109,6 +109,8 @@ Running run.bat instead avoids this manual IDE classpath setup.
 
 - MySQL users store password hashes and unique account identities; customer
   history is filtered by user ID rather than matching display names.
+- Only signed-in customers can create bookings; the admin dashboard has no
+  booking form. Administrators can still manage drivers and reservation status.
 - MySQL drivers and reservations use database-generated IDs.
 - Booking creation atomically claims the driver and inserts a Pending booking.
   On failure, the entire transaction is rolled back.
@@ -133,7 +135,7 @@ The original Swing screens and fare formula are otherwise unchanged.
   initial schema creation, then use a restricted MySQL account.
 - **Another MySQL host/port:** configure TAXI_DB_URL and TAXI_DB_SERVER_URL.
 - **Customer sees no history:** reservations are linked to the signed-in user
-  ID. Administrator-created bookings without that user ID are admin-only.
+  ID. Administrators can review all reservations but cannot create bookings.
 
 ## Manual verification checklist
 
