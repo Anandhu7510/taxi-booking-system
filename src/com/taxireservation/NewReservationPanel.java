@@ -8,7 +8,6 @@ import java.awt.*;
  * New booking form supporting both Taxi + Driver and Driver Only (Own Vehicle).
  */
 public class NewReservationPanel extends JPanel {
-    private static final String[] CAB_TYPES = {"Mini", "Sedan", "SUV", "Luxury"};
 
     private final JTextField txtName = new JTextField();
     private final JTextField txtPhone = new JTextField();
@@ -20,13 +19,15 @@ public class NewReservationPanel extends JPanel {
     private final JComboBox<String> cboServiceType = new JComboBox<>(new String[]{
             "Taxi + Driver", "Driver Only (Own Vehicle)"
     });
-    private final JComboBox<String> cboCabType = new JComboBox<>(CAB_TYPES);
+    private final JComboBox<String> cboCabType = new JComboBox<>(new String[]{
+            DriverAvailability.ALL_TYPES, "Mini", "Sedan", "SUV", "Luxury"
+    });
     private final JTextField txtOwnVehicleType = new JTextField();
     private final JTextField txtOwnVehicleNumber = new JTextField();
     private final JComboBox<Driver> cboDriver = new JComboBox<>();
     private final JLabel lblDriverHint = new JLabel();
     private final JPanel driverPicker = new JPanel(new BorderLayout(0, 4));
-    private boolean initialCabTypeChosen = false;
+    private boolean loadingDrivers = false;
     private final JLabel lblFareValue = new JLabel("\u20B9 0");
     private final JLabel lblFareHint = new JLabel();
 
@@ -55,7 +56,15 @@ public class NewReservationPanel extends JPanel {
 
         buildVehicleDetailsPanel();
         driverPicker.setOpaque(false);
-        driverPicker.add(cboDriver, BorderLayout.NORTH);
+        JPanel driverControls = new JPanel(new BorderLayout(8, 0));
+        driverControls.setOpaque(false);
+        driverControls.add(cboDriver, BorderLayout.CENTER);
+        cboDriver.setMaximumRowCount(12);
+        JButton btnRefreshDrivers = new JButton("Refresh Drivers");
+        btnRefreshDrivers.setToolTipText("Reload available drivers from MySQL.");
+        btnRefreshDrivers.addActionListener(e -> refreshDriverList());
+        driverControls.add(btnRefreshDrivers, BorderLayout.EAST);
+        driverPicker.add(driverControls, BorderLayout.NORTH);
         lblDriverHint.setFont(new Font("Segoe UI", Font.PLAIN, 11));
         lblDriverHint.setForeground(new Color(0x374151));
         driverPicker.add(lblDriverHint, BorderLayout.SOUTH);
@@ -140,9 +149,9 @@ public class NewReservationPanel extends JPanel {
                 updateServiceMode();
             }
         });
-        cboCabType.addActionListener(e -> {
-            updateFareEstimate();
-            refreshDriverList();
+        cboCabType.addActionListener(e -> refreshDriverList());
+        cboDriver.addActionListener(e -> {
+            if (!loadingDrivers) updateFareEstimate();
         });
 
         cboPickup.addActionListener(e -> updateFareEstimate());
@@ -246,7 +255,6 @@ public class NewReservationPanel extends JPanel {
             txtOwnVehicleNumber.setText("");
         }
 
-        updateFareEstimate();
         refreshDriverList();
 
         vehicleDetailsPanel.revalidate();
@@ -265,7 +273,6 @@ public class NewReservationPanel extends JPanel {
     private void updateFareEstimate() {
         int km = RouteCatalog.distanceKm((String) cboPickup.getSelectedItem(),
                 (String) cboDrop.getSelectedItem());
-
         txtEstimatedKm.setText(km > 0 ? String.format("%d km", km) : "-");
         if (km <= 0) {
             lblFareValue.setText("\u20B9 0");
@@ -274,12 +281,26 @@ public class NewReservationPanel extends JPanel {
         }
 
         boolean driverOnly = isDriverOnlyMode();
-        String service = (String) cboServiceType.getSelectedItem();
-        String cabType = driverOnly ? "Own Vehicle" : (String) cboCabType.getSelectedItem();
-        double fare = RouteCatalog.fare(service, cabType, km);
+        Driver driver = (Driver) cboDriver.getSelectedItem();
+        if (!driverOnly && driver == null) {
+            lblFareValue.setText("\u20B9 0");
+            lblFareHint.setText("Choose a driver and vehicle to calculate your taxi fare.");
+            return;
+        }
+
+        String type = driverOnly ? "Own Vehicle"
+                : DriverAvailability.canonicalCabType(driver.getVehicleType());
+        if (type == null) {
+            lblFareValue.setText("\u20B9 0");
+            lblFareHint.setText("The selected driver's vehicle type is unsupported.");
+            return;
+        }
+
+        double fare = RouteCatalog.fare(
+                (String) cboServiceType.getSelectedItem(), type, km);
         lblFareValue.setText(String.format("\u20B9 %.0f", fare));
         lblFareHint.setText(String.format("%s - %d km (fixed route estimate)",
-                driverOnly ? "Driver only" : cabType, km));
+                driverOnly ? "Driver only" : type, km));
     }
 
     @Override
@@ -295,55 +316,58 @@ public class NewReservationPanel extends JPanel {
         Driver previouslySelected = (Driver) cboDriver.getSelectedItem();
         Integer previousId = previouslySelected == null ? null : previouslySelected.getId();
         try {
-            // Driver Only sees all available drivers. Taxi + Driver requires the
-            // selected vehicle category, not an arbitrary available driver.
+            // Fetch once from MySQL. Filtering stays deterministic and never changes
+            // the cab-filter dropdown from inside its own event listener.
             java.util.List<Driver> available = DataStore.get().getAvailableDrivers(null);
-            String cabType = (String) cboCabType.getSelectedItem();
+            boolean driverOnly = isDriverOnlyMode();
+            String filter = (String) cboCabType.getSelectedItem();
+            java.util.List<Driver> matches = driverOnly
+                    ? available : DriverAvailability.forCabType(available, filter);
 
-            // On first load, avoid defaulting to an empty Mini category when the
-            // database actually has available Sedan/SUV/Luxury drivers.
-            if (!isDriverOnlyMode() && !initialCabTypeChosen) {
-                initialCabTypeChosen = true;
-                if (DriverAvailability.forCabType(available, cabType).isEmpty()) {
-                    String firstAvailable = DriverAvailability.firstAvailableType(available, CAB_TYPES);
-                    if (firstAvailable != null && !firstAvailable.equals(cabType)) {
-                        cboCabType.setSelectedItem(firstAvailable);
-                        // setSelectedItem invokes the cab-type listener which refreshes this list.
-                        return;
-                    }
+            loadingDrivers = true;
+            try {
+                cboDriver.removeAllItems();
+                int restoreIndex = -1;
+                for (int i = 0; i < matches.size(); i++) {
+                    Driver driver = matches.get(i);
+                    cboDriver.addItem(driver);
+                    if (previousId != null && driver.getId() == previousId) restoreIndex = i;
                 }
+                // Do not silently pick the first driver after a refresh/filter change.
+                cboDriver.setSelectedIndex(restoreIndex);
+                cboDriver.setEnabled(!matches.isEmpty());
+            } finally {
+                loadingDrivers = false;
             }
 
-            java.util.List<Driver> matches = isDriverOnlyMode()
-                    ? available : DriverAvailability.forCabType(available, cabType);
-            cboDriver.removeAllItems();
-            for (Driver driver : matches) {
-                cboDriver.addItem(driver);
-                if (previousId != null && previousId == driver.getId()) {
-                    cboDriver.setSelectedItem(driver);
-                }
-            }
-            cboDriver.setEnabled(!matches.isEmpty());
-            if (isDriverOnlyMode()) {
-                lblDriverHint.setText(matches.isEmpty()
-                        ? "No drivers currently available. Contact the administrator."
-                        : matches.size() + " available driver(s) for your own vehicle.");
-            } else if (!matches.isEmpty()) {
-                lblDriverHint.setText(matches.size() + " " + cabType
-                        + " cab + driver option(s) available.");
-            } else if (available.isEmpty()) {
-                lblDriverHint.setText("No drivers available. Ask admin to add or enable a driver.");
+            if (matches.isEmpty()) {
+                lblDriverHint.setText(available.isEmpty()
+                        ? "No available drivers. Ask admin to add or enable one, then refresh."
+                        : driverOnly
+                          ? "No drivers available for your own vehicle."
+                          : "No drivers for this cab filter. Available types: "
+                            + DriverAvailability.availableTypes(available) + ".");
+            } else if (driverOnly) {
+                lblDriverHint.setText(matches.size()
+                        + " available driver(s). Select one or press Refresh Drivers.");
             } else {
-                lblDriverHint.setText("No " + cabType + " drivers. Available cab types: "
-                        + DriverAvailability.availableTypes(available, CAB_TYPES) + ".");
+                lblDriverHint.setText(matches.size()
+                        + " driver + vehicle option(s). Select one; fare uses its actual cab type.");
             }
             lblDriverHint.setForeground(matches.isEmpty()
                     ? new Color(0xB45309) : new Color(0x374151));
+            updateFareEstimate();
         } catch (IllegalStateException ex) {
-            cboDriver.removeAllItems();
-            cboDriver.setEnabled(false);
-            lblDriverHint.setText("Cannot load drivers from MySQL.");
+            loadingDrivers = true;
+            try {
+                cboDriver.removeAllItems();
+                cboDriver.setEnabled(false);
+            } finally {
+                loadingDrivers = false;
+            }
+            lblDriverHint.setText("Driver data could not be loaded; try Refresh Drivers.");
             lblDriverHint.setForeground(new Color(0xB91C1C));
+            updateFareEstimate();
             JOptionPane.showMessageDialog(this, ex.getMessage(), "Database Error",
                     JOptionPane.ERROR_MESSAGE);
         }
@@ -385,7 +409,15 @@ public class NewReservationPanel extends JPanel {
         }
 
         String serviceType = (String) cboServiceType.getSelectedItem();
-        String cabType = driverOnly ? "Own Vehicle" : (String) cboCabType.getSelectedItem();
+        String cabType = driverOnly ? "Own Vehicle"
+                : DriverAvailability.canonicalCabType(driver.getVehicleType());
+        if (cabType == null) {
+            JOptionPane.showMessageDialog(this,
+                    "Selected driver has an unsupported cab type. Ask admin to correct it.",
+                    "Invalid Driver Vehicle", JOptionPane.WARNING_MESSAGE);
+            refreshDriverList();
+            return;
+        }
         String customerVehicle = driverOnly
                 ? txtOwnVehicleType.getText().trim() + " - " + txtOwnVehicleNumber.getText().trim()
                 : "";

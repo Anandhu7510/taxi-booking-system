@@ -3,35 +3,42 @@ package com.taxireservation;
 import java.util.ArrayList;
 import java.util.List;
 
-/** Matching rules for the customer-facing driver selector. */
+/** Vehicle matching rules shared by the customer booking form and its tests. */
 public final class DriverAvailability {
+    public static final String ALL_TYPES = "All available cab types";
+    public static final String[] CAB_TYPES = {"Mini", "Sedan", "SUV", "Luxury"};
+
     private DriverAvailability() { }
 
-    /** A taxi booking must match the driver's registered cab category. */
-    public static List<Driver> forCabType(List<Driver> available, String cabType) {
+    /** Returns a canonical cab category, or null for unknown database values. */
+    public static String canonicalCabType(String value) {
+        if (value == null) return null;
+        for (String type : CAB_TYPES) {
+            if (type.equalsIgnoreCase(value.trim())) return type;
+        }
+        return null;
+    }
+
+    /** Taxi + Driver may offer any available driver with a supported vehicle. */
+    public static List<Driver> forCabType(List<Driver> available, String filter) {
         List<Driver> matches = new ArrayList<>();
-        if (available == null || cabType == null) return matches;
+        if (available == null) return matches;
+        boolean all = ALL_TYPES.equals(filter);
+        String type = canonicalCabType(filter);
+        if (!all && type == null) return matches;
         for (Driver driver : available) {
-            if (driver != null && driver.getVehicleType() != null
-                    && cabType.trim().equalsIgnoreCase(driver.getVehicleType().trim())) {
+            if (driver == null) continue;
+            String registered = canonicalCabType(driver.getVehicleType());
+            if (registered != null && (all || registered.equals(type))) {
                 matches.add(driver);
             }
         }
         return matches;
     }
 
-    /** Returns the first selectable cab category with at least one available driver. */
-    public static String firstAvailableType(List<Driver> available, String[] cabTypes) {
-        for (String type : cabTypes) {
-            if (!forCabType(available, type).isEmpty()) return type;
-        }
-        return null;
-    }
-
-    /** Concise category list for explaining an empty selection. */
-    public static String availableTypes(List<Driver> available, String[] cabTypes) {
+    public static String availableTypes(List<Driver> available) {
         List<String> types = new ArrayList<>();
-        for (String type : cabTypes) {
+        for (String type : CAB_TYPES) {
             if (!forCabType(available, type).isEmpty()) types.add(type);
         }
         return types.isEmpty() ? "none" : String.join(", ", types);
