@@ -119,6 +119,13 @@ Running run.bat instead avoids this manual IDE classpath setup.
   Driver Only (Own Vehicle) selects any available driver.
 - Start Trip, Complete, and Cancel persist their changes. Completion and
   cancellation free the associated driver.
+- Customers can cancel only their own Pending/Ongoing reservations from My
+  Reservations. Their cancellation uses the signed-in account ID in the MySQL
+  transaction and releases the driver. Completed/Cancelled trips remain
+  visible for history but cannot be cancelled again.
+- Customer My Reservations provides high-contrast Cancel Booking and Refresh
+  buttons. Admin-only Start Trip, Complete, and Delete Record are not exposed
+  to customers.
 - In the admin reservation screen, select a Pending/Ongoing booking to change
   its status. Completed/Cancelled are final and cannot be reopened. Buttons
   explain invalid actions rather than silently ignoring clicks.
