@@ -114,6 +114,24 @@ Running run.bat instead avoids this manual IDE classpath setup.
 - MySQL drivers and reservations use database-generated IDs.
 - Booking creation atomically claims the driver and inserts a Pending booking.
   On failure, the entire transaction is rolled back.
+- The customer chooses a Starting City and Destination City from four supported
+  cities: Thrissur, Kochi, Palakkad, and Thiruvananthapuram. Distance is
+  automatically displayed as a read-only value, and the fare updates when the
+  route, service type, or cab type changes. Identical/unselected cities cannot
+  be booked.
+- Distances are **fixed offline estimates supplied for this microproject**;
+  they are not live road distances or Google Maps estimates. Reverse journeys
+  use the same values:
+  - Thrissur ↔ Thiruvananthapuram: 281 km
+  - Thrissur ↔ Kochi: 84 km
+  - Thrissur ↔ Palakkad: 65 km
+  - Kochi ↔ Palakkad: 141 km
+  - Kochi ↔ Thiruvananthapuram: 209 km
+  - Thiruvananthapuram ↔ Palakkad: 337 km
+- The original rates remain unchanged: Mini ₹80 + ₹14/km; Sedan ₹120 +
+  ₹20/km; SUV ₹180 + ₹30/km; Luxury ₹250 + ₹50/km; Driver Only ₹50 + ₹10/km.
+  Route and fare are also checked before writing a booking to MySQL; this
+  requires no schema change and leaves older reservations intact.
 - A driver with an active booking cannot be double-booked or manually removed.
 - Taxi + Driver selects only available drivers of the requested cab type;
   Driver Only (Own Vehicle) selects any available driver.
@@ -163,3 +181,14 @@ The original Swing screens and fare formula are otherwise unchanged.
 
 System requirement: JDK 17+, MySQL Server 8.0+, Windows PowerShell. There are
 no additional manually installed Java libraries when using run.bat.
+
+## Offline route regression tests
+
+A small standalone test covers all six routes in both directions, invalid
+city pairs, and each existing fare calculation. On a computer with JDK 17+:
+
+    javac -d out src/com/taxireservation/RouteCatalog.java tests/com/taxireservation/RouteCatalogTest.java
+    java -cp out com.taxireservation.RouteCatalogTest
+
+The normal Windows run.bat workflow remains unchanged. RouteCatalog.java
+is picked up automatically by build.ps1's source compilation.
