@@ -91,9 +91,13 @@ public class DriverManagementPanel extends JPanel {
         JButton btnRemove = actionButton("Remove Driver", new Color(0xB91C1C));
         btnRemove.addActionListener(e -> removeSelected());
 
+        JButton btnRefresh = actionButton("Refresh Drivers", new Color(0x1D4ED8));
+        btnRefresh.addActionListener(e -> loadDrivers());
+
         p.add(btnAvailable);
         p.add(btnOffline);
         p.add(btnRemove);
+        p.add(btnRefresh);
         return p;
     }
 

@@ -134,17 +134,23 @@ Running run.bat instead avoids this manual IDE classpath setup.
   requires no schema change and leaves older reservations intact.
 - A driver with an active booking cannot be double-booked or manually removed.
 
-- Taxi + Driver lists only drivers whose registered vehicle type matches the
-  selected cab type. On initial form load, the app picks the first cab type
-  with a currently available driver rather than leaving a blank default.
-  If the customer manually selects an unavailable cab type, the form displays
-  the categories that do have available drivers and explains why the driver
-  dropdown is empty. Driver Only continues to show all available drivers.
+- Taxi + Driver now defaults to **All available cab types**, listing every
+  available driver with a supported registered vehicle type (Mini, Sedan,
+  SUV, Luxury). The customer may optionally filter the list by cab category.
+  Choosing a driver determines the actual cab type and corresponding fare;
+  the form does not silently change the cab filter or select a driver.
+  An unavailable category shows an explicit explanation. Driver Only still
+  lists **all** available drivers (with or without a supported taxi cab type).
+- The customer booking screen includes **Refresh Drivers** to reload MySQL
+  records after an administrator adds/enables a driver. The admin Drivers
+  screen includes **Refresh Drivers** as well. The customer dashboard has
+  **Refresh**, and My Reservations already has **Refresh**. No restart needed
+  after admin changes in a separately running application.
 - Availability means the driver is active, marked Available, and has no
   Pending/Ongoing reservation; adding a driver as another cab type or leaving
   one Offline does not make them bookable for Sedan/SUV by mistake.
 - From the repository root, standalone matching tests (no database required):
-    javac -d out src/com/taxireservation/Driver.java src/com/taxireservation/DriverAvailability.java tests/com/taxireservation/DriverAvailabilityTest.java
+    javac -d out src/com/taxireservation/Driver.java src/com/taxireservation/RouteCatalog.java src/com/taxireservation/DriverAvailability.java tests/com/taxireservation/DriverAvailabilityTest.java
     java -cp out com.taxireservation.DriverAvailabilityTest
 
 - Taxi + Driver selects only available drivers of the requested cab type;

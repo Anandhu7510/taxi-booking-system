@@ -114,9 +114,16 @@ public class CustomerDashboard extends JFrame {
 
         JButton bookButton = actionButton("Book a Ride", new Color(0x2563EB));
         bookButton.addActionListener(e -> showBooking());
+        JButton refreshButton = actionButton("Refresh", new Color(0x374151));
+        refreshButton.addActionListener(e -> refreshHome());
+
+        JPanel headerActions = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
+        headerActions.setOpaque(false);
+        headerActions.add(refreshButton);
+        headerActions.add(bookButton);
 
         header.add(headingText, BorderLayout.WEST);
-        header.add(bookButton, BorderLayout.EAST);
+        header.add(headerActions, BorderLayout.EAST);
 
         JPanel body = new JPanel();
         body.setOpaque(false);
