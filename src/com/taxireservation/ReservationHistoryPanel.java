@@ -107,9 +107,8 @@ public class ReservationHistoryPanel extends JPanel {
         JButton button = new JButton(label);
         button.setUI(new BasicButtonUI() {
             @Override
-            protected void paintText(Graphics graphics, JComponent component,
+            protected void paintText(Graphics graphics, AbstractButton action,
                                      Rectangle textRect, String text) {
-                AbstractButton action = (AbstractButton) component;
                 graphics.setColor(action.getForeground());
                 FontMetrics metrics = graphics.getFontMetrics(action.getFont());
                 BasicGraphicsUtils.drawStringUnderlineCharAt(graphics, text,
