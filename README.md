@@ -119,6 +119,13 @@ Running run.bat instead avoids this manual IDE classpath setup.
   Driver Only (Own Vehicle) selects any available driver.
 - Start Trip, Complete, and Cancel persist their changes. Completion and
   cancellation free the associated driver.
+- In the admin reservation screen, select a Pending/Ongoing booking to change
+  its status. Completed/Cancelled are final and cannot be reopened. Buttons
+  explain invalid actions rather than silently ignoring clicks.
+- **Delete Record** permanently removes a completed or cancelled booking after
+  confirmation; active bookings cannot be deleted. Deletion also removes
+  completed-trip revenue from dashboard totals. Use it only when permanent
+  removal is intended, since it cannot be undone.
 - Driver removal is a soft deletion to preserve existing booking history.
 - All dashboard totals and completed-trip revenue are loaded from MySQL.
 
