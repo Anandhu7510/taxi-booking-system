@@ -52,6 +52,14 @@ public final class DataStore {
                     serviceType, cabType, customerVehicle, estimatedKm, driverId, fare);
         } catch (SQLException ex) { throw failure(ex); }
     }
+    public void deleteFinishedReservation(int reservationId) {
+        if (!Session.hasRole("ADMIN")) {
+            throw new IllegalStateException("Only administrators can delete reservation records.");
+        }
+        try { ReservationDAO.deleteFinished(reservationId); }
+        catch (SQLException ex) { throw failure(ex); }
+    }
+
     public void updateReservationStatus(int reservationId, String status) {
         try { ReservationDAO.changeStatus(reservationId, status); }
         catch (SQLException ex) { throw failure(ex); }
