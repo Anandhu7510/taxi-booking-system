@@ -75,7 +75,7 @@ public final class ReservationDAO {
                         + "WHERE d.id = ? AND d.is_active = TRUE AND d.status = 'Available' "
                         + "AND NOT EXISTS (SELECT 1 FROM reservations r WHERE r.driver_id = d.id "
                         + "AND r.status IN ('Pending', 'Ongoing'))";
-                if ("Taxi + Driver".equals(serviceType)) claimSql += " AND d.vehicle_type = ?";
+                if ("Taxi + Driver".equals(serviceType)) claimSql += " AND LOWER(TRIM(d.vehicle_type)) = LOWER(?)";
                 try (PreparedStatement claim = connection.prepareStatement(claimSql)) {
                     claim.setInt(1, driverId);
                     if ("Taxi + Driver".equals(serviceType)) claim.setString(2, cabType);

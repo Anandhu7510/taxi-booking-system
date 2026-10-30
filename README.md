@@ -133,6 +133,20 @@ Running run.bat instead avoids this manual IDE classpath setup.
   Route and fare are also checked before writing a booking to MySQL; this
   requires no schema change and leaves older reservations intact.
 - A driver with an active booking cannot be double-booked or manually removed.
+
+- Taxi + Driver lists only drivers whose registered vehicle type matches the
+  selected cab type. On initial form load, the app picks the first cab type
+  with a currently available driver rather than leaving a blank default.
+  If the customer manually selects an unavailable cab type, the form displays
+  the categories that do have available drivers and explains why the driver
+  dropdown is empty. Driver Only continues to show all available drivers.
+- Availability means the driver is active, marked Available, and has no
+  Pending/Ongoing reservation; adding a driver as another cab type or leaving
+  one Offline does not make them bookable for Sedan/SUV by mistake.
+- From the repository root, standalone matching tests (no database required):
+    javac -d out src/com/taxireservation/Driver.java src/com/taxireservation/DriverAvailability.java tests/com/taxireservation/DriverAvailabilityTest.java
+    java -cp out com.taxireservation.DriverAvailabilityTest
+
 - Taxi + Driver selects only available drivers of the requested cab type;
   Driver Only (Own Vehicle) selects any available driver.
 - Start Trip, Complete, and Cancel persist their changes. Completion and

@@ -17,7 +17,7 @@ public final class DriverDAO {
                 + "AND d.status = 'Available' "
                 + "AND NOT EXISTS (SELECT 1 FROM reservations r WHERE r.driver_id = d.id "
                 + "AND r.status IN ('Pending', 'Ongoing'))";
-        if (vehicleType != null) sql += " AND d.vehicle_type = ?";
+        if (vehicleType != null) sql += " AND LOWER(TRIM(d.vehicle_type)) = LOWER(?)";
         return read(sql + " ORDER BY d.id", vehicleType);
     }
 
