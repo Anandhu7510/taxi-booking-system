@@ -60,6 +60,18 @@ public final class DataStore {
         catch (SQLException ex) { throw failure(ex); }
     }
 
+    /** Cancellation derives account ownership from the active session, never UI input. */
+    public void cancelOwnReservation(int reservationId) {
+        if (!Session.hasRole("CUSTOMER") || Session.getCurrentUser() == null) {
+            throw new IllegalStateException("Only signed-in customers can cancel their bookings.");
+        }
+        try {
+            ReservationDAO.cancelOwn(reservationId, Session.getCurrentUser().getId());
+        } catch (SQLException ex) {
+            throw failure(ex);
+        }
+    }
+
     public void updateReservationStatus(int reservationId, String status) {
         try { ReservationDAO.changeStatus(reservationId, status); }
         catch (SQLException ex) { throw failure(ex); }

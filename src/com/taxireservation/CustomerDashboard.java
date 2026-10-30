@@ -13,7 +13,7 @@ public class CustomerDashboard extends JFrame {
     private final JPanel contentPanel = new JPanel(cardLayout);
     private final JPanel homePanel = new JPanel(new BorderLayout());
     private final NewReservationPanel bookingPanel = new NewReservationPanel(null);
-    private final CustomerReservationsPanel reservationsPanel = new CustomerReservationsPanel();
+    private final CustomerReservationsPanel reservationsPanel = new CustomerReservationsPanel(this::refreshHome);
 
     private final JLabel lblTotalTrips = new JLabel("0");
     private final JLabel lblActiveTrips = new JLabel("0");

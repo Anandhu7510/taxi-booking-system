@@ -108,6 +108,61 @@ public final class ReservationDAO {
         }
     }
 
+    /**
+     * Cancel an active booking only when it belongs to the authenticated customer.
+     * Assignment release and reservation status change are committed together.
+     */
+    public static void cancelOwn(int reservationId, int customerId) throws SQLException {
+        if (customerId <= 0 || reservationId <= 0) {
+            throw new SQLException("Invalid reservation or customer.");
+        }
+        try (Connection connection = DatabaseConnection.open()) {
+            connection.setAutoCommit(false);
+            try {
+                String currentStatus;
+                int driverId;
+                try (PreparedStatement select = connection.prepareStatement(
+                        "SELECT status, driver_id FROM reservations "
+                        + "WHERE id = ? AND customer_id = ? FOR UPDATE")) {
+                    select.setInt(1, reservationId);
+                    select.setInt(2, customerId);
+                    try (ResultSet rows = select.executeQuery()) {
+                        if (!rows.next()) {
+                            throw new SQLException("Reservation not found for this customer account.");
+                        }
+                        currentStatus = rows.getString("status");
+                        driverId = rows.getInt("driver_id");
+                    }
+                }
+                if (!"Pending".equals(currentStatus) && !"Ongoing".equals(currentStatus)) {
+                    throw new SQLException("This reservation is already " + currentStatus
+                            + " and cannot be cancelled.");
+                }
+                try (PreparedStatement update = connection.prepareStatement(
+                        "UPDATE reservations SET status = 'Cancelled' "
+                        + "WHERE id = ? AND customer_id = ? AND status IN ('Pending', 'Ongoing')")) {
+                    update.setInt(1, reservationId);
+                    update.setInt(2, customerId);
+                    if (update.executeUpdate() != 1) {
+                        throw new SQLException("This reservation was updated by another session.");
+                    }
+                }
+                try (PreparedStatement release = connection.prepareStatement(
+                        "UPDATE drivers d SET d.status = 'Available' "
+                        + "WHERE d.id = ? AND d.is_active = TRUE "
+                        + "AND NOT EXISTS (SELECT 1 FROM reservations r WHERE r.driver_id = d.id "
+                        + "AND r.status IN ('Pending', 'Ongoing'))")) {
+                    release.setInt(1, driverId);
+                    release.executeUpdate();
+                }
+                connection.commit();
+            } catch (SQLException | RuntimeException ex) {
+                connection.rollback();
+                throw ex;
+            }
+        }
+    }
+
     public static void changeStatus(int reservationId, String newStatus) throws SQLException {
         if (!"Ongoing".equals(newStatus) && !"Completed".equals(newStatus)
                 && !"Cancelled".equals(newStatus)) {
