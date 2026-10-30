@@ -2,8 +2,6 @@ package com.taxireservation;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
-import javax.swing.event.DocumentEvent;
-import javax.swing.event.DocumentListener;
 import java.awt.*;
 
 /**
@@ -13,10 +11,10 @@ public class NewReservationPanel extends JPanel {
 
     private final JTextField txtName = new JTextField();
     private final JTextField txtPhone = new JTextField();
-    private final JTextField txtPickup = new JTextField();
-    private final JTextField txtDrop = new JTextField();
+    private final JComboBox<String> cboPickup = new JComboBox<>(RouteCatalog.cityOptions());
+    private final JComboBox<String> cboDrop = new JComboBox<>(RouteCatalog.cityOptions());
     private final JTextField txtDateTime = new JTextField(currentDateTime());
-    private final JTextField txtEstimatedKm = new JTextField("10");
+    private final JTextField txtEstimatedKm = new JTextField("-");
 
     private final JComboBox<String> cboServiceType = new JComboBox<>(new String[]{
             "Taxi + Driver", "Driver Only (Own Vehicle)"
@@ -54,12 +52,16 @@ public class NewReservationPanel extends JPanel {
         c.fill = GridBagConstraints.HORIZONTAL;
 
         buildVehicleDetailsPanel();
+        // The distance is derived from the two cities; customers cannot edit it.
+        txtEstimatedKm.setEditable(false);
+        txtEstimatedKm.setFocusable(false);
+        txtEstimatedKm.setBackground(new Color(0xF3F4F6));
 
         int row = 0;
         addField(form, c, row++, "Customer Name", txtName);
         addField(form, c, row++, "Phone Number", txtPhone);
-        addField(form, c, row++, "Pickup Location", txtPickup);
-        addField(form, c, row++, "Drop Location", txtDrop);
+        addField(form, c, row++, "Starting City", cboPickup);
+        addField(form, c, row++, "Destination City", cboDrop);
         addField(form, c, row++, "Date / Time", txtDateTime);
         addField(form, c, row++, "Estimated Distance (km)", txtEstimatedKm);
         addField(form, c, row++, "Service Type", cboServiceType);
@@ -122,16 +124,8 @@ public class NewReservationPanel extends JPanel {
             refreshDriverList();
         });
 
-        txtEstimatedKm.getDocument().addDocumentListener(new DocumentListener() {
-            @Override
-            public void insertUpdate(DocumentEvent e) { updateFareEstimate(); }
-
-            @Override
-            public void removeUpdate(DocumentEvent e) { updateFareEstimate(); }
-
-            @Override
-            public void changedUpdate(DocumentEvent e) { updateFareEstimate(); }
-        });
+        cboPickup.addActionListener(e -> updateFareEstimate());
+        cboDrop.addActionListener(e -> updateFareEstimate());
 
         applyCustomerIdentity();
         updateServiceMode();
@@ -243,58 +237,28 @@ public class NewReservationPanel extends JPanel {
     }
 
     private double readEstimatedKm() {
-        try {
-            double km = Double.parseDouble(txtEstimatedKm.getText().trim());
-            return Double.isFinite(km) && km > 0 ? km : -1;
-        } catch (NumberFormatException ex) {
-            return -1;
-        }
+        return RouteCatalog.distanceKm((String) cboPickup.getSelectedItem(),
+                (String) cboDrop.getSelectedItem());
     }
 
     private void updateFareEstimate() {
-        double km = readEstimatedKm();
+        int km = RouteCatalog.distanceKm((String) cboPickup.getSelectedItem(),
+                (String) cboDrop.getSelectedItem());
 
+        txtEstimatedKm.setText(km > 0 ? String.format("%d km", km) : "-");
         if (km <= 0) {
             lblFareValue.setText("\u20B9 0");
-            lblFareHint.setText("Enter a valid distance greater than 0 km.");
+            lblFareHint.setText("Choose two different cities to see the estimated fare.");
             return;
         }
 
-        double baseFare;
-        double perKm;
-        String pricingLabel;
-
-        if (isDriverOnlyMode()) {
-            baseFare = 50;
-            perKm = 10;
-            pricingLabel = "Driver only";
-        } else {
-            String type = (String) cboCabType.getSelectedItem();
-
-            if ("Mini".equals(type)) {
-                baseFare = 80;
-                perKm = 14;
-            } else if ("Sedan".equals(type)) {
-                baseFare = 120;
-                perKm = 20;
-            } else if ("SUV".equals(type)) {
-                baseFare = 180;
-                perKm = 30;
-            } else if ("Luxury".equals(type)) {
-                baseFare = 250;
-                perKm = 50;
-            } else {
-                baseFare = 80;
-                perKm = 14;
-            }
-            pricingLabel = type == null ? "Taxi + Driver" : type;
-        }
-
-        double fare = baseFare + (perKm * km);
+        boolean driverOnly = isDriverOnlyMode();
+        String service = (String) cboServiceType.getSelectedItem();
+        String cabType = driverOnly ? "Own Vehicle" : (String) cboCabType.getSelectedItem();
+        double fare = RouteCatalog.fare(service, cabType, km);
         lblFareValue.setText(String.format("\u20B9 %.0f", fare));
-        lblFareHint.setText(String.format(
-                "%s: \u20B9%.0f base + \u20B9%.0f/km x %.1f km",
-                pricingLabel, baseFare, perKm, km));
+        lblFareHint.setText(String.format("%s - %d km (fixed route estimate)",
+                driverOnly ? "Driver only" : cabType, km));
     }
 
     @Override
@@ -327,9 +291,7 @@ public class NewReservationPanel extends JPanel {
 
     private void confirmBooking() {
         if (txtName.getText().trim().length() == 0
-                || txtPhone.getText().trim().length() == 0
-                || txtPickup.getText().trim().length() == 0
-                || txtDrop.getText().trim().length() == 0) {
+                || txtPhone.getText().trim().length() == 0) {
             JOptionPane.showMessageDialog(this, "Please fill in all required fields.",
                     "Missing Information", JOptionPane.WARNING_MESSAGE);
             return;
@@ -338,9 +300,9 @@ public class NewReservationPanel extends JPanel {
         double estimatedKm = readEstimatedKm();
         if (estimatedKm <= 0) {
             JOptionPane.showMessageDialog(this,
-                    "Enter a valid estimated distance greater than 0 km.",
-                    "Invalid Distance", JOptionPane.WARNING_MESSAGE);
-            txtEstimatedKm.requestFocusInWindow();
+                    "Select two different cities for the starting point and destination.",
+                    "Invalid Route", JOptionPane.WARNING_MESSAGE);
+            cboPickup.requestFocusInWindow();
             return;
         }
 
@@ -367,14 +329,15 @@ public class NewReservationPanel extends JPanel {
                 ? txtOwnVehicleType.getText().trim() + " - " + txtOwnVehicleNumber.getText().trim()
                 : "";
 
-        double fare = Double.parseDouble(lblFareValue.getText().replace("\u20B9", "").trim());
+        double fare = RouteCatalog.fare(serviceType, cabType, estimatedKm);
 
         Integer customerId = Session.hasRole("CUSTOMER")
                 ? Session.getCurrentUser().getId() : null;
         try {
             DataStore.get().bookReservation(
                     customerId, txtName.getText(), txtPhone.getText(),
-                    txtPickup.getText(), txtDrop.getText(), txtDateTime.getText(),
+                    (String) cboPickup.getSelectedItem(), (String) cboDrop.getSelectedItem(),
+                    txtDateTime.getText(),
                     serviceType, cabType, customerVehicle, estimatedKm,
                     driver.getId(), fare);
         } catch (IllegalStateException ex) {
@@ -391,10 +354,9 @@ public class NewReservationPanel extends JPanel {
 
         if (!Session.hasRole("CUSTOMER")) txtName.setText("");
         txtPhone.setText("");
-        txtPickup.setText("");
-        txtDrop.setText("");
+        cboPickup.setSelectedIndex(0);
+        cboDrop.setSelectedIndex(0);
         txtDateTime.setText(currentDateTime());
-        txtEstimatedKm.setText("10");
         txtOwnVehicleType.setText("");
         txtOwnVehicleNumber.setText("");
         cboServiceType.setSelectedIndex(0);

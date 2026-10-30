@@ -44,6 +44,23 @@ public final class ReservationDAO {
         if (!Double.isFinite(estimatedKm) || estimatedKm <= 0 || !Double.isFinite(fare) || fare < 0) {
             throw new SQLException("Invalid fare or distance.");
         }
+        // Recheck the selected route and fare before MySQL persists the booking.
+        // UI display values are never the authority for the trip price.
+        int expectedDistance = RouteCatalog.distanceKm(pickup, drop);
+        if (expectedDistance <= 0) {
+            throw new SQLException("Select two different supported cities.");
+        }
+        final double expectedFare;
+        try {
+            expectedFare = RouteCatalog.fare(serviceType, cabType, expectedDistance);
+        } catch (IllegalArgumentException ex) {
+            throw new SQLException(ex.getMessage(), ex);
+        }
+        if (Math.abs(estimatedKm - expectedDistance) > 0.001
+                || Math.abs(fare - expectedFare) > 0.01) {
+            throw new SQLException("The route distance or fare is out of date. "
+                    + "Select the route again before booking.");
+        }
         LocalDateTime scheduled;
         try {
             scheduled = LocalDateTime.parse(dateTime.trim(), FORMAT);
