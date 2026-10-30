@@ -25,7 +25,8 @@ public class ReservationHistoryPanel extends JPanel {
     private JTextField txtSearch;
     private JComboBox<String> cboStatusFilter;
     private final DashboardHomePanel homePanel;
-    private JButton btnStart, btnComplete, btnCancel;
+    private JButton btnStart, btnComplete, btnCancel, btnDelete;
+    private JLabel lblActionHint;
 
     public ReservationHistoryPanel(DashboardHomePanel homePanel) {
         this.homePanel = homePanel;
@@ -83,8 +84,11 @@ public class ReservationHistoryPanel extends JPanel {
     }
 
     private JPanel buildActions() {
-        JPanel p = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 10));
-        p.setBackground(Color.WHITE);
+        JPanel footer = new JPanel(new BorderLayout(0, 4));
+        footer.setBackground(Color.WHITE);
+
+        JPanel actions = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 10));
+        actions.setBackground(Color.WHITE);
 
         btnStart = actionButton("Start Trip", new Color(0x1D4ED8));
         btnStart.addActionListener(e -> updateSelectedStatus("Ongoing"));
@@ -95,11 +99,27 @@ public class ReservationHistoryPanel extends JPanel {
         btnCancel = actionButton("Cancel Booking", new Color(0xB91C1C));
         btnCancel.addActionListener(e -> updateSelectedStatus("Cancelled"));
 
-        p.add(btnStart);
-        p.add(btnComplete);
-        p.add(btnCancel);
+        btnDelete = actionButton("Delete Record", new Color(0x7F1D1D));
+        btnDelete.addActionListener(e -> deleteSelected());
+
+        JButton btnRefresh = actionButton("Refresh", new Color(0x374151));
+        btnRefresh.addActionListener(e -> loadReservations());
+
+        actions.add(btnStart);
+        actions.add(btnComplete);
+        actions.add(btnCancel);
+        actions.add(btnDelete);
+        actions.add(btnRefresh);
+
+        lblActionHint = new JLabel("Select a reservation to manage it.");
+        lblActionHint.setForeground(new Color(0x374151));
+        lblActionHint.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+        lblActionHint.setBorder(new EmptyBorder(0, 10, 7, 0));
+
+        footer.add(actions, BorderLayout.NORTH);
+        footer.add(lblActionHint, BorderLayout.SOUTH);
         updateActionButtons();
-        return p;
+        return footer;
     }
 
     /** Use consistent, legible button colors across Windows look-and-feels. */
@@ -127,22 +147,33 @@ public class ReservationHistoryPanel extends JPanel {
         return button;
     }
 
-    /** A completed/cancelled reservation is final, so its actions stay disabled. */
+    /** Keep actions responsive: invalid transitions explain why instead of silently doing nothing. */
     private void updateActionButtons() {
-        if (btnStart == null || btnComplete == null || btnCancel == null || table == null) return;
-        int viewRow = table.getSelectedRow();
-        String status = viewRow < 0 ? "" :
-                String.valueOf(model.getValueAt(table.convertRowIndexToModel(viewRow), 11));
-        boolean active = "Pending".equals(status) || "Ongoing".equals(status);
-        setActionState(btnStart, "Pending".equals(status), new Color(0x1D4ED8));
-        setActionState(btnComplete, active, new Color(0x047857));
-        setActionState(btnCancel, active, new Color(0xB91C1C));
+        if (lblActionHint == null || table == null) return;
+        String status = selectedStatus();
+        String hint;
+        if ("Pending".equals(status)) {
+            hint = "Pending: Start, complete, or cancel this booking.";
+        } else if ("Ongoing".equals(status)) {
+            hint = "Ongoing: Complete or cancel this trip.";
+        } else if ("Completed".equals(status)) {
+            hint = "Completed is final. Delete Record permanently removes this history and its revenue.";
+        } else if ("Cancelled".equals(status)) {
+            hint = "Cancelled is final. Delete Record permanently removes this booking.";
+        } else {
+            hint = "Select a reservation. Actions will explain if a status change is not allowed.";
+        }
+        lblActionHint.setText(hint);
+        btnStart.setToolTipText("Start is only available for Pending reservations.");
+        btnComplete.setToolTipText("Complete is only available for Pending or Ongoing reservations.");
+        btnCancel.setToolTipText("Cancel is only available for Pending or Ongoing reservations.");
+        btnDelete.setToolTipText("Permanently delete Completed or Cancelled reservations only.");
     }
 
-    private static void setActionState(JButton button, boolean enabled, Color activeColor) {
-        button.setEnabled(enabled);
-        button.setBackground(enabled ? activeColor : new Color(0xE5E7EB));
-        button.setForeground(enabled ? Color.WHITE : new Color(0x374151));
+    private String selectedStatus() {
+        int row = table.getSelectedRow();
+        return row < 0 ? null : String.valueOf(
+                model.getValueAt(table.convertRowIndexToModel(row), 11));
     }
 
     private void loadReservations() {
@@ -186,13 +217,22 @@ public class ReservationHistoryPanel extends JPanel {
 
     private void updateSelectedStatus(String status) {
         int viewRow = table.getSelectedRow();
-        if (viewRow < 0) return;
+        if (viewRow < 0) {
+            JOptionPane.showMessageDialog(this, "Select a reservation first.",
+                    "No Reservation Selected", JOptionPane.INFORMATION_MESSAGE);
+            return;
+        }
         int row = table.convertRowIndexToModel(viewRow);
         int id = (int) model.getValueAt(row, 0);
-        String current = String.valueOf(model.getValueAt(row, 11));
+        String current = selectedStatus();
         boolean active = "Pending".equals(current) || "Ongoing".equals(current);
         if (!active || ("Ongoing".equals(status) && !"Pending".equals(current))) {
-            updateActionButtons();
+            String reason = !active
+                    ? "Booking #" + id + " is already " + current + ". This is a final status."
+                    : "Booking #" + id + " is already Ongoing.";
+            JOptionPane.showMessageDialog(this,
+                    reason + "\nOnly Pending or Ongoing reservations can be completed or cancelled.",
+                    "Action Not Available", JOptionPane.INFORMATION_MESSAGE);
             return;
         }
         try {
@@ -200,16 +240,49 @@ public class ReservationHistoryPanel extends JPanel {
             loadReservations();
             if (homePanel != null) homePanel.refresh();
         } catch (IllegalStateException ex) {
-            // Another session may have completed/cancelled this booking since the last refresh.
             loadReservations();
             if (ex.getMessage() != null && ex.getMessage().contains("cannot transition")) {
                 JOptionPane.showMessageDialog(this,
-                        "This booking's status has already changed. The list has been refreshed.",
+                        "This booking was already updated elsewhere. The list has been refreshed.",
                         "Booking Already Updated", JOptionPane.INFORMATION_MESSAGE);
             } else {
                 JOptionPane.showMessageDialog(this, ex.getMessage(), "Unable to Update Booking",
                         JOptionPane.ERROR_MESSAGE);
             }
+        }
+    }
+
+    private void deleteSelected() {
+        int viewRow = table.getSelectedRow();
+        if (viewRow < 0) {
+            JOptionPane.showMessageDialog(this, "Select a reservation first.",
+                    "No Reservation Selected", JOptionPane.INFORMATION_MESSAGE);
+            return;
+        }
+        int row = table.convertRowIndexToModel(viewRow);
+        int id = (int) model.getValueAt(row, 0);
+        String current = selectedStatus();
+        if (!"Completed".equals(current) && !"Cancelled".equals(current)) {
+            JOptionPane.showMessageDialog(this,
+                    "Booking #" + id + " is still active. Complete or cancel it before deleting.",
+                    "Active Booking", JOptionPane.INFORMATION_MESSAGE);
+            return;
+        }
+        int confirmation = JOptionPane.showConfirmDialog(this,
+                "Permanently delete booking #" + id + " (" + current + ")?\n"
+                + "This removes it from history and reports, including completed revenue.\n"
+                + "This cannot be undone.",
+                "Confirm Permanent Deletion", JOptionPane.YES_NO_OPTION,
+                JOptionPane.WARNING_MESSAGE);
+        if (confirmation != JOptionPane.YES_OPTION) return;
+        try {
+            DataStore.get().deleteFinishedReservation(id);
+            loadReservations();
+            if (homePanel != null) homePanel.refresh();
+        } catch (IllegalStateException ex) {
+            loadReservations();
+            JOptionPane.showMessageDialog(this, ex.getMessage(),
+                    "Unable to Delete Booking", JOptionPane.ERROR_MESSAGE);
         }
     }
 

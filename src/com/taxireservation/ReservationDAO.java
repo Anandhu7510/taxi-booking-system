@@ -95,6 +95,19 @@ public final class ReservationDAO {
         }
     }
 
+    /** Permanently remove only finished/cancelled records; never orphan active drivers. */
+    public static void deleteFinished(int reservationId) throws SQLException {
+        String sql = "DELETE FROM reservations WHERE id = ? AND status IN ('Completed', 'Cancelled')";
+        try (Connection connection = DatabaseConnection.open();
+             PreparedStatement statement = connection.prepareStatement(sql)) {
+            statement.setInt(1, reservationId);
+            if (statement.executeUpdate() != 1) {
+                throw new SQLException("Only completed or cancelled reservations can be deleted. "
+                        + "Refresh the list and check its current status.");
+            }
+        }
+    }
+
     public static void changeStatus(int reservationId, String newStatus) throws SQLException {
         if (!"Ongoing".equals(newStatus) && !"Completed".equals(newStatus)
                 && !"Cancelled".equals(newStatus)) {
