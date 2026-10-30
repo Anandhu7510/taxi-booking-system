@@ -3,6 +3,8 @@ package com.taxireservation;
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import javax.swing.table.DefaultTableModel;
+import javax.swing.plaf.basic.BasicButtonUI;
+import javax.swing.plaf.basic.BasicGraphicsUtils;
 import java.awt.*;
 import java.util.List;
 
@@ -59,10 +61,7 @@ public class DriverManagementPanel extends JPanel {
         p.add(new JLabel("Vehicle#:")); p.add(txtVehicleNo);
         p.add(new JLabel("Type:")); p.add(cboType);
 
-        JButton btnAdd = new JButton("Add Driver");
-        btnAdd.setBackground(new Color(0x3B82F6));
-        btnAdd.setForeground(Color.WHITE);
-        btnAdd.setFocusPainted(false);
+        JButton btnAdd = actionButton("Add Driver", new Color(0x1D4ED8));
         btnAdd.addActionListener(e -> addDriver());
         p.add(btnAdd);
 
@@ -83,20 +82,45 @@ public class DriverManagementPanel extends JPanel {
     private JPanel buildActions() {
         JPanel p = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 10));
 
-        JButton btnAvailable = new JButton("Set Available");
+        JButton btnAvailable = actionButton("Set Available", new Color(0x047857));
         btnAvailable.addActionListener(e -> updateSelectedStatus("Available"));
 
-        JButton btnOffline = new JButton("Set Offline");
+        JButton btnOffline = actionButton("Set Offline", new Color(0x374151));
         btnOffline.addActionListener(e -> updateSelectedStatus("Offline"));
 
-        JButton btnRemove = new JButton("Remove Driver");
-        btnRemove.setForeground(new Color(0xB91C1C));
+        JButton btnRemove = actionButton("Remove Driver", new Color(0xB91C1C));
         btnRemove.addActionListener(e -> removeSelected());
 
         p.add(btnAvailable);
         p.add(btnOffline);
         p.add(btnRemove);
         return p;
+    }
+
+    /** Solid high-contrast buttons independent of the native Windows look-and-feel. */
+    private static JButton actionButton(String label, Color background) {
+        JButton button = new JButton(label);
+        button.setUI(new BasicButtonUI() {
+            @Override
+            protected void paintText(Graphics graphics, JComponent component,
+                                     Rectangle textRect, String text) {
+                AbstractButton action = (AbstractButton) component;
+                graphics.setColor(action.getForeground());
+                FontMetrics metrics = graphics.getFontMetrics(action.getFont());
+                BasicGraphicsUtils.drawStringUnderlineCharAt(graphics, text,
+                        action.getDisplayedMnemonicIndex(),
+                        textRect.x, textRect.y + metrics.getAscent());
+            }
+        });
+        button.setOpaque(true);
+        button.setContentAreaFilled(true);
+        button.setBorderPainted(false);
+        button.setFocusPainted(false);
+        button.setFont(new Font("Segoe UI", Font.BOLD, 12));
+        button.setBackground(background);
+        button.setForeground(Color.WHITE);
+        button.setBorder(BorderFactory.createEmptyBorder(9, 16, 9, 16));
+        return button;
     }
 
     private void loadDrivers() {
